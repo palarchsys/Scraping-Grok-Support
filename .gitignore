@@ -7,6 +7,8 @@ __pycache__/
 .ruff_cache/
 .env
 data/
+logs/
+*.log
 *.db
 *.db-wal
 *.db-shm

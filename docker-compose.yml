@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sscraping
+      POSTGRES_PASSWORD: sscraping
+      POSTGRES_DB: sscraping
+    ports:
+      - "5432:5432"
+    volumes:
+      - sscraping_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sscraping -d sscraping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sscraping_pg:

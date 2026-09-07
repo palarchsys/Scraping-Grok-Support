@@ -1,82 +1,94 @@
-"""Accès SQL async. aiosqlite + WAL = un process, des milliers d'upserts/s largement assez."""
+"""Accès PostgreSQL async (psycopg). Identités stockées en clair."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import logging
 from pathlib import Path
 
-import aiosqlite
+from psycopg import AsyncConnection
+from psycopg.rows import dict_row
 
+from sscraping.db import sql as Q
 from sscraping.nlp.schema import IncidentExtraction
 from sscraping.scrape.base import ScrapedArticle
 
+log = logging.getLogger("sscraping.sql")
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _split_sql(blob: str) -> list[str]:
+    stmts: list[str] = []
+    buf: list[str] = []
+    for line in blob.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("--"):
+            continue
+        buf.append(line)
+        if stripped.endswith(";"):
+            stmts.append("\n".join(buf).strip())
+            buf = []
+    return stmts
 
 
 class Store:
-    def __init__(self, db_path: Path) -> None:
-        self._path = db_path
-        self._db: aiosqlite.Connection | None = None
+    def __init__(self, dsn: str) -> None:
+        self._dsn = dsn
+        self._conn: AsyncConnection | None = None
 
     async def open(self) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = await aiosqlite.connect(self._path)
-        self._db.row_factory = aiosqlite.Row
-        await self._db.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-        await self._db.commit()
+        log.debug("connect %s", _redact_dsn(self._dsn))
+        self._conn = await AsyncConnection.connect(self._dsn, row_factory=dict_row)
+        await self.init_schema()
+
+    async def init_schema(self) -> None:
+        assert self._conn is not None
+        raw = SCHEMA_PATH.read_text(encoding="utf-8")
+        for stmt in _split_sql(raw):
+            log.debug("DDL %s", stmt.split()[0:4])
+            await self._conn.execute(stmt)
+        await self._conn.commit()
+        log.info("schema OK")
 
     async def close(self) -> None:
-        if self._db:
-            await self._db.close()
-            self._db = None
+        if self._conn:
+            await self._conn.close()
+            self._conn = None
+            log.debug("connection closed")
 
     @property
-    def db(self) -> aiosqlite.Connection:
-        assert self._db is not None
-        return self._db
+    def db(self) -> AsyncConnection:
+        assert self._conn is not None
+        return self._conn
 
     async def upsert_article(self, art: ScrapedArticle) -> int:
-        """INSERT ON CONFLICT(url) : on ne réécrit le texte que s'il est plus long (HTML > résumé)."""
-        date = art.date_publication.isoformat() if art.date_publication else None
+        log.debug(
+            "UPSERT article source=%s url=%s titre=%r chars=%d statut=%s",
+            art.source,
+            art.url,
+            art.titre[:80],
+            len(art.texte or ""),
+            art.statut,
+        )
         cur = await self.db.execute(
-            """
-            INSERT INTO articles (source, url, titre, texte, date_publication, scraped_at, statut, error)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(url) DO UPDATE SET
-              titre=excluded.titre,
-              texte=CASE WHEN length(excluded.texte) > length(articles.texte) THEN excluded.texte ELSE articles.texte END,
-              date_publication=COALESCE(excluded.date_publication, articles.date_publication),
-              statut=excluded.statut,
-              error=excluded.error
-            RETURNING id
-            """,
-            (art.source, art.url, art.titre, art.texte, date, _now(), art.statut, art.error),
+            Q.UPSERT_ARTICLE,
+            (art.source, art.url, art.titre, art.texte, art.date_publication, art.statut, art.error),
         )
         row = await cur.fetchone()
         await self.db.commit()
-        return int(row["id"])
+        article_id = int(row["id"])
+        log.info("article id=%s url=%s", article_id, art.url)
+        return article_id
 
-    async def pending_analysis(self, limit: int = 200) -> list[aiosqlite.Row]:
-        cur = await self.db.execute(
-            """
-            SELECT * FROM articles
-            WHERE statut='ok' AND analyzed_at IS NULL AND length(texte) > 40
-            ORDER BY id DESC LIMIT ?
-            """,
-            (limit,),
-        )
-        return await cur.fetchall()
+    async def pending_analysis(self, limit: int = 200) -> list[dict]:
+        cur = await self.db.execute(Q.PENDING, (limit,))
+        rows = await cur.fetchall()
+        log.info("pending analysis=%d limit=%d", len(rows), limit)
+        return list(rows)
 
     async def mark_analyzed(self, article_id: int, backend: str) -> None:
-        await self.db.execute(
-            "UPDATE articles SET analyzed_at=?, analyze_backend=? WHERE id=?",
-            (_now(), backend, article_id),
-        )
+        log.debug("MARK analyzed id=%s backend=%s", article_id, backend)
+        await self.db.execute(Q.MARK_ANALYZED, (backend, article_id))
         await self.db.commit()
 
     async def insert_incident(
@@ -87,15 +99,19 @@ class Store:
         raw: str,
     ) -> None:
         if not ext.is_aggression:
+            log.debug("skip incident id=%s is_aggression=false", article_id)
             return
-        # Champs auteur : valeurs extraites, éventuellement NULL. Pas de masquage.
+        log.info(
+            "UPSERT incident article_id=%s cat=%s nom=%s prenom=%s age=%s conf=%.2f",
+            article_id,
+            ext.categorie,
+            ext.agresseur.nom,
+            ext.agresseur.prenom,
+            ext.agresseur.age,
+            ext.confidence,
+        )
         await self.db.execute(
-            """
-            INSERT INTO incidents (
-              article_id, categorie, nom, prenom, nationalite, age, pays_origine,
-              annee, mois, jour, confidence, preuves, modele_version, raw_model_output, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+            Q.UPSERT_INCIDENT,
             (
                 article_id,
                 ext.categorie,
@@ -111,15 +127,31 @@ class Store:
                 json.dumps(ext.preuves, ensure_ascii=False),
                 backend,
                 raw,
-                _now(),
             ),
         )
         await self.db.commit()
 
     async def counts(self) -> dict[str, int]:
-        arts = await (await self.db.execute("SELECT COUNT(*) n FROM articles")).fetchone()
-        inc = await (await self.db.execute("SELECT COUNT(*) n FROM incidents")).fetchone()
-        pending = await (
-            await self.db.execute("SELECT COUNT(*) n FROM articles WHERE analyzed_at IS NULL AND statut='ok'")
-        ).fetchone()
-        return {"articles": arts["n"], "incidents": inc["n"], "pending": pending["n"]}
+        arts = (await (await self.db.execute("SELECT COUNT(*) AS n FROM articles")).fetchone())["n"]
+        inc = (await (await self.db.execute("SELECT COUNT(*) AS n FROM incidents")).fetchone())["n"]
+        pending = (
+            await (
+                await self.db.execute(
+                    "SELECT COUNT(*) AS n FROM articles WHERE analyzed_at IS NULL AND statut='ok'"
+                )
+            ).fetchone()
+        )["n"]
+        out = {"articles": int(arts), "incidents": int(inc), "pending": int(pending)}
+        log.info("counts %s", out)
+        return out
+
+
+def _redact_dsn(dsn: str) -> str:
+    if "@" not in dsn or "://" not in dsn:
+        return dsn
+    head, tail = dsn.split("://", 1)
+    if "@" in tail and ":" in tail.split("@", 1)[0]:
+        user = tail.split(":", 1)[0]
+        rest = tail.split("@", 1)[1]
+        return f"{head}://{user}:***@{rest}"
+    return dsn

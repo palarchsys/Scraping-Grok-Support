@@ -1,8 +1,8 @@
 from pathlib import Path
 
+from sscraping.crawler.extract import next_page_url, parse_article, parse_listing
 from sscraping.scrape.base import ScrapedArticle
-from sscraping.scrape.site import next_page_url, parse_article_page, parse_listing
-from sscraping.scrape.sources import load_sources, Source, ListingXPath, ArticleXPath, Pagination
+from sscraping.scrape.sources import ArticleXPath, ListingXPath, Pagination, Source, load_sources
 
 FIX = Path(__file__).resolve().parents[1] / "fixtures" / "html"
 
@@ -50,8 +50,14 @@ def test_parse_listing_and_next() -> None:
 def test_parse_article_xpath() -> None:
     src = _src()
     html = (FIX / "a.html").read_text(encoding="utf-8")
-    art = ScrapedArticle(source="demo", url="https://example.invalid/a.html", titre="", texte="", date_publication=None)
-    parse_article_page(html, art, src)
+    art = ScrapedArticle(
+        source="demo",
+        url="https://example.invalid/a.html",
+        titre="",
+        texte="",
+        date_publication=None,
+    )
+    parse_article(html, art, src)
     assert art.titre.startswith("Agression")
     assert "agressé" in art.texte
     assert art.date_publication is not None

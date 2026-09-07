@@ -8,7 +8,7 @@ violence_physique | agression_sexuelle | homicide | tentative | menace | vol_ave
 ## Flux
 `prefilter → si miss: skip non_agression → connector.complete_json → IncidentExtraction.model_validate → store (identités en clair)`
 
-LLM parallèle (`NLP_CONCURRENCY`, défaut 4). Writes SQLite en série.
+LLM parallèle (`NLP_CONCURRENCY`, défaut 4). Writes PostgreSQL en série. Logs DEBUG → `logs/nlp.log`.
 
 ## Extraction
 Champs auteur/date : **valeurs de l’article**, NULL si non écrits. Jamais d’inférence. Jamais de masquage en base. `confidence` est un score, pas un filtre destructif. Masquage = GUI hors dépôt.

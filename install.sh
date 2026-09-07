@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Programme d'installation Ubuntu 26.04 pour ss-craping-bot.
 # Usage :
-#   ./install.sh           # CPU + SQLite + CLI (étape 1 + connecteur Grok)
+#   ./install.sh           # CPU + PostgreSQL + Scrapy + CLI (étape 1 + connecteur Grok)
 #   ./install.sh --v100    # + serveur d'inférence local (vLLM si CUDA sm_70, sinon llama.cpp)
 set -euo pipefail
 
@@ -48,8 +48,9 @@ log "paquets APT"
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   python3 python3-venv python3-pip python3-dev python3-full \
-  build-essential libxml2-dev libxslt1-dev libffi-dev \
-  sqlite3 ca-certificates curl git pkg-config
+  build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev \
+  postgresql postgresql-contrib \
+  ca-certificates curl git pkg-config
 
 PYVER="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' \
@@ -61,12 +62,25 @@ python3 -m venv --upgrade-deps .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-mkdir -p data
+mkdir -p data logs
+chmod +x scripts/serve-v100.sh scripts/init-db.sh 2>/dev/null || true
 if [[ ! -f .env ]]; then
   cp .env.example .env
   log "créé .env (édite XAI_API_KEY pour le connecteur Grok)"
 fi
-chmod +x scripts/serve-v100.sh 2>/dev/null || true
+
+log "PostgreSQL"
+set +e
+./scripts/init-db.sh
+PG_OK=$?
+set -e
+if [[ "$PG_OK" -ne 0 ]]; then
+  log "init-db a échoué — lance plus tard : ./scripts/init-db.sh && sscraping db-init"
+else
+  set +e
+  sscraping db-init
+  set -e
+fi
 
 if [[ "$WITH_V100" -eq 1 ]]; then
   log "profil V100 32 Go"
@@ -113,14 +127,14 @@ fi
 log "OK"
 echo
 echo "  source .venv/bin/activate"
+echo "  sscraping db-init"
 echo "  sscraping scrape          # fixtures, zéro réseau"
+echo "  sscraping scrape --live   # Scrapy + XPath + PostgreSQL (verbeux, logs/)"
 echo "  sscraping analyze --backend grok"
 echo "  sscraping run --backend grok"
 echo "  sscraping stats"
+echo "  tail -f logs/sscraping.log logs/scrapy.log logs/sql.log"
 if [[ "$WITH_V100" -eq 1 ]]; then
   echo "  ./scripts/serve-v100.sh   # terminal dédié"
   echo "  sscraping analyze --backend v100"
 fi
-echo
-echo "Mode live (respecte robots.txt, plafond max_articles) :"
-echo "  sscraping scrape --live"

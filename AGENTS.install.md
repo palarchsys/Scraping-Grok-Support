@@ -3,13 +3,17 @@
 Seul script d’install : `install.sh` (jamais root). Override OS : `ALLOW_OTHER_OS=1`.
 
 ```
-./install.sh          # venv + deps CPU + .env
+./install.sh          # venv + Scrapy + psycopg + PostgreSQL + .env
 ./install.sh --v100   # + vLLM ou llama.cpp CUDA + GGUF
+./scripts/init-db.sh  # docker compose db ou rôle/base locaux
+sscraping db-init     # schema.sql
 ```
 
-Python ≥3.12 (26.04). Paquets : libxml2, libxslt, sqlite3, build-essential.
+Python ≥3.12 (26.04). Paquets : libxml2, libxslt, libpq, postgresql.
 
-GPU : Tesla V100 32 Go, sm_70. vLLM peut refuser Volta → fallback llama.cpp Q4_K_M ~9 Go.
-Serveur : `scripts/serve-v100.sh` bind 127.0.0.1:8000.
+Postgres : `DATABASE_URL=postgresql://sscraping:sscraping@127.0.0.1:5432/sscraping`
+Alt : `docker compose up -d db`
 
-Ne pas committer `.env`, `data/`, `models/`.
+Logs : `logs/`. GPU V100 32 Go sm_70 comme avant.
+
+Ne pas committer `.env`, `data/`, `logs/`, `models/`.

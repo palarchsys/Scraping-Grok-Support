@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     )
 
     demo: bool = True
-    db_path: Path = ROOT / "data" / "sscraping.db"
+    database_url: str = "postgresql://sscraping:sscraping@127.0.0.1:5432/sscraping"
+    log_dir: Path = ROOT / "logs"
+    log_quiet: bool = False
     concurrency: int = 8
     nlp_concurrency: int = 4
     request_timeout: float = 20.0

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sscraping"
-version = "1.0.0"
-description = "Bot pédagogique scrape + analyse d'articles (Grok API / V100 local)."
+version = "1.1.0"
+description = "Bot pédagogique scrape Scrapy + analyse d'articles (Grok API / V100 local)."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -14,11 +14,13 @@ dependencies = [
   "httpx[http2]>=0.27",
   "selectolax>=0.3.27",
   "lxml>=5.3",
+  "scrapy>=2.11",
+  "parsel>=1.9",
+  "psycopg[binary]>=3.2",
   "pydantic>=2.9",
   "pydantic-settings>=2.5",
   "PyYAML>=6.0",
   "python-dateutil>=2.9",
-  "aiosqlite>=0.20",
   "typer>=0.12",
   "tenacity>=9.0",
   "orjson>=3.10",

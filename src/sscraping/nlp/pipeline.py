@@ -15,7 +15,7 @@ from sscraping.nlp.filter import might_be_aggression
 from sscraping.nlp.schema import IncidentExtraction
 from sscraping.settings import Settings
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("sscraping.nlp")
 
 SYSTEM_PROMPT = """Tu es un extracteur JSON pour un exercice pédagogique.
 Tu lis UN article de presse. Tu ne juges pas, tu n'inventes pas.
@@ -57,9 +57,11 @@ async def analyze_one(
     max_chars: int = 8000,
 ) -> tuple[IncidentExtraction, str]:
     if not might_be_aggression(titre, texte):
+        log.info("préfiltre SKIP titre=%r", titre[:80])
         ext = IncidentExtraction(is_aggression=False, categorie="non_agression", confidence=1.0, preuves=[])
         return ext, "{}"
 
+    log.info("préfiltre HIT titre=%r chars=%d → LLM", titre[:80], len(texte))
     raw_obj: dict[str, Any] = await connector.complete_json(
         SYSTEM_PROMPT,
         _user_payload(titre, texte, max_chars),
@@ -80,10 +82,12 @@ async def analyze_one(
 
 
 async def run_analyze(store: Store, connector: LlmConnector, settings: Settings) -> int:
-    """LLM en parallèle (nlp_concurrency), écritures SQLite en série."""
+    """LLM en parallèle (nlp_concurrency), écritures PostgreSQL en série."""
     rows = await store.pending_analysis(limit=settings.max_articles)
     if not rows:
+        log.info("rien à analyser")
         return 0
+    log.info("analyze batch=%d concurrency=%d backend=%s/%s", len(rows), settings.nlp_concurrency, connector.name, connector.model)
     sem = asyncio.Semaphore(max(1, settings.nlp_concurrency))
 
     async def _job(row: Any) -> tuple[Any, IncidentExtraction, str]:

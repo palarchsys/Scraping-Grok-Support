@@ -10,11 +10,12 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 
 | Couche | Choix | Pourquoi |
 |---|---|---|
-| Runtime | Python ≥ 3.12, asyncio | I/O bound (HTTP + LLM) |
-| HTTP | httpx HTTP/2 + tenacity | pool, retry 429/5xx |
-| HTML | lxml XPath | listes paginées + intra-article |
-| RSS | lxml | flux optionnel (`kind: rss`) |
-| SQL | SQLite WAL + aiosqlite | un process, upserts/s suffisants |
+| Crawl | Scrapy | robots, retry, délai, scheduler, logs DEBUG |
+| HTML | parsel / XPath | listes paginées + intra-article |
+| RSS | Scrapy + lxml | `kind: rss` optionnel |
+| SQL | PostgreSQL + psycopg3 | identités en clair, upsert URL |
+| NLP | asyncio + httpx | Grok API / V100 `/v1` |
+| Logs | `logs/*.log` rotatifs | scrape / sql / nlp / scrapy |
 | Contrat | pydantic v2 | JSON LLM refusé si hors schéma |
 | CLI | typer | `sscraping scrape \| analyze \| run` |
 
@@ -26,10 +27,10 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 config/sources.yaml (blocs site)
         │
         ▼
-listing_url + pagination XPath ──► cartes ──► GET article + XPath
+   Scrapy (robots, delay, XPath pagination + article)
         │
         ▼
-   articles SQLite (titre, texte, url, date)
+   articles PostgreSQL (titre, texte, url, date)
         │
         ▼
    préfiltre → Grok | V100 → incidents
@@ -95,14 +96,17 @@ chmod +x install.sh
 ./install.sh --v100
 ```
 
-Éditer `.env` : `XAI_API_KEY=...` pour Grok.
+Éditer `.env` : `DATABASE_URL=...` et `XAI_API_KEY=...` pour Grok.
 
 ```bash
 source .venv/bin/activate
-sscraping scrape                 # fixtures
+sscraping db-init
+sscraping scrape                 # fixtures → PostgreSQL
+sscraping scrape --live          # Scrapy, logs DEBUG dans logs/
 sscraping analyze --backend grok
 sscraping run --backend v100     # serveur local déjà lancé
 sscraping stats
+tail -f logs/sscraping.log logs/sql.log logs/scrapy.log
 pytest -q
 ```
 
