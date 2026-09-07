@@ -1,6 +1,7 @@
 # ss-craping-bot — contrat agent (lire en entier, ne pas élargir)
 
-Pédagogique, démo locale. Rien n’est publié. Données personnelles = NULL si doute.
+Pédagogique, démo locale. Rien n’est publié depuis git.
+SQLite stocke les identités **en clair** telles qu’extraites de l’article. NULL seulement si le texte ne les donne pas. Pas de masquage SQL. Le masquage est l’affaire d’une GUI (pas dans ce dépôt).
 
 ## Objectif
 Deux pipelines découplés :
@@ -30,8 +31,8 @@ tests/  fixtures/
 ## Règles
 - Idempotence URL unique. Jamais d’UPDATE destructif du texte (sauf si plus long).
 - Défaut DEMO (fixtures). Live HTTP seulement `--live`.
-- Préfiltre regex avant LLM. LLM JSON strict validé Pydantic. confidence < seuil → champs NULL.
-- Un article → 0..1 incident. Ne jamais inventer nationalité/pays.
+- Préfiltre regex avant LLM. LLM JSON strict validé Pydantic.
+- Un article → 0..1 incident. Ne jamais inventer un champ : absent dans le texte → NULL. Ne jamais effacer un champ extrait (pas d’anonymisation SQL, pas de wipe sur confidence).
 - Pas de HTML complet en git. Pas de secrets. `.env` local.
 - Commentaires : pourquoi, pas quoi. Docstrings module + fonctions publiques.
 - Sources live en parallèle, items d’une source en série (`delay_s`). NLP : `nlp_concurrency` puis writes SQLite série.

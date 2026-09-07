@@ -1,8 +1,10 @@
 # ss-craping-bot
 
-Bot pédagogique en deux étapes : **collecte** d’articles de presse, puis **analyse** du sujet. Si le sujet n’est pas une forme d’agression, on passe. Sinon on extrait nom, prénom, nationalité, âge, pays d’origine, année / mois / jour des faits — vide si absent.
+Bot pédagogique en deux étapes : **collecte** d’articles de presse, puis **analyse** du sujet. Si le sujet n’est pas une forme d’agression, on passe. Sinon on extrait nom, prénom, nationalité, âge, pays d’origine, année / mois / jour des faits — vide si absent du texte.
 
-Dépôt public = code + installateur Ubuntu 26.04. **Rien n’est publié.** Usage démonstratif. Identités des fixtures **fictives**.
+La table `incidents` stocke ces champs **en clair** (ce que l’article écrit). Aucun masquage SQL. Une GUI future masquera à l’affichage ; elle n’est pas dans ce dépôt.
+
+Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-ligne pour tests (pas un anonymiseur).
 
 ## Pourquoi cette stack
 
@@ -43,7 +45,7 @@ Deux connecteurs, **même** interface OpenAI `/v1/chat/completions` :
 | `grok` | API xAI (`grok-4.5`) | aucune GPU |
 | `v100` | `http://127.0.0.1:8000/v1` | NVIDIA V100 **32 Go** |
 
-Préfiltre regex → LLM JSON → Pydantic → SQL. `confidence < 0.7` → identifiants NULL.
+Préfiltre regex → LLM JSON → Pydantic → SQL. Identités stockées telles quelles. `confidence` est conservé à côté.
 
 ## Install Ubuntu 26.04
 

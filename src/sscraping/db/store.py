@@ -88,6 +88,7 @@ class Store:
     ) -> None:
         if not ext.is_aggression:
             return
+        # Champs auteur : valeurs extraites, éventuellement NULL. Pas de masquage.
         await self.db.execute(
             """
             INSERT INTO incidents (

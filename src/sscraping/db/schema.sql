@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS incidents (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
   categorie TEXT NOT NULL,
+  -- Identités en clair telles qu'extraites de l'article. NULL = absent du texte.
+  -- Aucun masquage SQL : le masquage est un souci d'affichage GUI (hors de ce dépôt).
   nom TEXT,
   prenom TEXT,
   nationalite TEXT,

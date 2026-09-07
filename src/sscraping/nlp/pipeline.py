@@ -72,15 +72,10 @@ async def analyze_one(
         ext = IncidentExtraction(is_aggression=False, categorie="non_agression", confidence=0.0, preuves=[])
         return ext, raw
 
+    # Identités : telles qu'extraites. NULL seulement si le modèle n'a rien lu dans l'article.
+    # Pas de masquage ici — l'affichage GUI (hors dépôt) masque. confidence reste un score.
     if ext.confidence < threshold:
-        ext.agresseur.nom = None
-        ext.agresseur.prenom = None
-        ext.agresseur.nationalite = None
-        ext.agresseur.age = None
-        ext.agresseur.pays_origine = None
-        if ext.categorie != "non_agression" and ext.confidence < 0.4:
-            ext.is_aggression = False
-            ext.categorie = "non_agression"
+        log.info("confidence %.2f < seuil %.2f — on stocke quand même les champs extraits", ext.confidence, threshold)
     return ext, raw
 
 

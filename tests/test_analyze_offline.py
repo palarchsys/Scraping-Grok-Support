@@ -26,6 +26,13 @@ class Dummy:
         return None
 
 
+class DummyLow(Dummy):
+    async def complete_json(self, system: str, user: str) -> dict:
+        data = await Dummy.complete_json(self, system, user)
+        data["confidence"] = 0.51
+        return data
+
+
 async def test_budget_skipped_without_llm() -> None:
     ext, raw = await analyze_one(Dummy(), "Budget", "Les élus votent le budget", 0.7)
     assert ext.categorie == "non_agression"
@@ -42,3 +49,16 @@ async def test_aggression_extracted() -> None:
     assert isinstance(ext, IncidentExtraction)
     assert ext.is_aggression
     assert ext.agresseur.nom == "Lefevre"
+
+
+async def test_low_confidence_keeps_identity() -> None:
+    ext, _ = await analyze_one(
+        DummyLow(),
+        "Agression à coups de poing",
+        "un homme a été agressé à coups de poing",
+        0.7,
+    )
+    assert ext.is_aggression
+    assert ext.agresseur.nom == "Lefevre"
+    assert ext.agresseur.prenom == "Marc"
+    assert ext.confidence == 0.51
