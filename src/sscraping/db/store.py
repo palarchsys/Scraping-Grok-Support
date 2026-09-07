@@ -91,6 +91,24 @@ class Store:
         await self.db.execute(Q.MARK_ANALYZED, (backend, article_id))
         await self.db.commit()
 
+    async def _attach_fait(self, incident_id: int, article_id: int, ext: IncidentExtraction) -> int | None:
+        from sscraping.nlp.group import grouping_key
+
+        key = grouping_key(ext)
+        if not key:
+            log.debug("groupage impossible incident=%s (nom/prénom/date incomplets)", incident_id)
+            return None
+        nom, prenom, annee, mois, jour = key
+        cur = await self.db.execute(
+            Q.UPSERT_FAIT,
+            (nom, prenom, annee, mois, jour, ext.type_crime, article_id),
+        )
+        row = await cur.fetchone()
+        fait_id = int(row["id"])
+        await self.db.execute(Q.ATTACH_FAIT, (fait_id, incident_id))
+        log.info("fait id=%s incident=%s %s %s %s-%s-%s", fait_id, incident_id, prenom, nom, annee, mois, jour)
+        return fait_id
+
     async def insert_incident(
         self,
         article_id: int,
@@ -110,7 +128,7 @@ class Store:
             ext.auteur.age,
             ext.confidence,
         )
-        await self.db.execute(
+        cur = await self.db.execute(
             Q.UPSERT_INCIDENT,
             (
                 article_id,
@@ -130,7 +148,31 @@ class Store:
                 raw,
             ),
         )
+        inc = await cur.fetchone()
+        incident_id = int(inc["id"])
+        await self._attach_fait(incident_id, article_id, ext)
         await self.db.commit()
+
+    async def triage(self) -> int:
+        """Regroupe les incidents déjà en base (même nom, prénom, date)."""
+        from sscraping.nlp.group import grouping_key
+        from sscraping.nlp.schema import Auteur, Faits, IncidentExtraction
+
+        rows = await (await self.db.execute(Q.UNGROUPED)).fetchall()
+        n = 0
+        for row in rows:
+            ext = IncidentExtraction(
+                is_crime=True,
+                type_crime=row["type_crime"],
+                auteur=Auteur(nom=row["nom"], prenom=row["prenom"]),
+                faits=Faits(annee=row["annee"], mois=row["mois"], jour=row["jour"]),
+                confidence=1.0,
+            )
+            if grouping_key(ext) and await self._attach_fait(int(row["id"]), int(row["article_id"]), ext):
+                n += 1
+        await self.db.commit()
+        log.info("triage incidents rattachés=%d / %d", n, len(rows))
+        return n
 
     async def counts(self) -> dict[str, int]:
         arts = (await (await self.db.execute("SELECT COUNT(*) AS n FROM articles")).fetchone())["n"]
@@ -142,7 +184,27 @@ class Store:
                 )
             ).fetchone()
         )["n"]
-        out = {"articles": int(arts), "incidents": int(inc), "pending": int(pending)}
+        faits = (await (await self.db.execute("SELECT COUNT(*) AS n FROM faits")).fetchone())["n"]
+        multi = (
+            await (
+                await self.db.execute(
+                    """
+                    SELECT COUNT(*) AS n FROM (
+                      SELECT fait_id FROM incidents
+                      WHERE fait_id IS NOT NULL
+                      GROUP BY fait_id HAVING COUNT(*) > 1
+                    ) t
+                    """
+                )
+            ).fetchone()
+        )["n"]
+        out = {
+            "articles": int(arts),
+            "incidents": int(inc),
+            "pending": int(pending),
+            "faits": int(faits),
+            "faits_multi": int(multi),
+        }
         log.info("counts %s", out)
         return out
 

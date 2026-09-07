@@ -41,21 +41,24 @@ def run_crawl(app: Settings, source_id: str | None = None) -> int:
         log.warning("aucune source enabled dans sources.yaml")
         return 0
 
+    from sscraping.crawler.known import load_known_urls
     from sscraping.crawler.pipelines import PostgresPipeline
 
+    known = load_known_urls(app.database_url)
     PostgresPipeline.total_upserts = 0
     settings = scrapy_settings(app)
     process = CrawlerProcess(settings, install_root_handler=False)
     for src in sources:
         spider = RssSpider if src.kind == "rss" else SiteSpider
         log.info(
-            "schedule spider kind=%s id=%s delay=%.2f listing=%s",
+            "schedule spider kind=%s id=%s delay=%.2f listing=%s known=%d",
             src.kind,
             src.id,
             src.delay_s,
             src.listing_url,
+            len(known),
         )
-        process.crawl(spider, source=src, app_settings=app)
+        process.crawl(spider, source=src, app_settings=app, known_urls=known)
     log.info("CrawlerProcess.start sources=%d", len(sources))
     process.start()
     total = int(PostgresPipeline.total_upserts)

@@ -27,16 +27,13 @@ class Settings(BaseSettings):
     request_timeout: float = 20.0
     user_agent: str = "ss-craping-bot/1.0 (pedagogical)"
     confidence_threshold: float = 0.7
+    llm_max_chars: int = 1800
     config_dir: Path = ROOT / "config"
     fixtures_dir: Path = ROOT / "fixtures"
 
     xai_api_key: str = ""
     grok_model: str = "grok-4.5"
     grok_base_url: str = "https://api.x.ai/v1"
-
-    v100_base_url: str = "http://127.0.0.1:8000/v1"
-    v100_model: str = "Qwen/Qwen2.5-14B-Instruct-AWQ"
-    v100_api_key: str = "not-needed"
 
     max_articles: int = Field(default=50, description="Plafond pédagogique par run live.")
 

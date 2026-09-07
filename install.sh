@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
 # Programme d'installation Ubuntu 26.04 pour ss-craping-bot.
-# Usage :
-#   ./install.sh           # CPU + PostgreSQL + Scrapy + CLI (étape 1 + connecteur Grok)
-#   ./install.sh --v100    # + serveur d'inférence local (vLLM si CUDA sm_70, sinon llama.cpp)
+# Usage : ./install.sh
 set -euo pipefail
 
-WITH_V100=0
 for arg in "$@"; do
   case "$arg" in
-    --v100) WITH_V100=1 ;;
     -h|--help)
-      sed -n '2,6p' "$0"
+      sed -n '2,4p' "$0"
       exit 0
       ;;
     *)
@@ -63,10 +59,10 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 mkdir -p data logs
-chmod +x scripts/serve-v100.sh scripts/init-db.sh 2>/dev/null || true
+chmod +x scripts/init-db.sh 2>/dev/null || true
 if [[ ! -f .env ]]; then
   cp .env.example .env
-  log "créé .env (édite XAI_API_KEY pour le connecteur Grok)"
+  log "créé .env (édite XAI_API_KEY pour Grok)"
 fi
 
 log "PostgreSQL"
@@ -82,59 +78,13 @@ else
   set -e
 fi
 
-if [[ "$WITH_V100" -eq 1 ]]; then
-  log "profil V100 32 Go"
-  if ! command -v nvidia-smi >/dev/null 2>&1; then
-    die "nvidia-smi absent. Installe le driver NVIDIA (ubuntu-drivers autoinstall) puis relance --v100"
-  fi
-  nvidia-smi || true
-  GPU_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1 || true)"
-  VRAM="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 || echo 0)"
-  log "GPU=$GPU_NAME VRAM=${VRAM} MiB"
-
-  pip install 'huggingface_hub[cli]'
-  mkdir -p models
-
-  set +e
-  pip install vllm
-  VLLM_OK=$?
-  set -e
-  if [[ "$VLLM_OK" -ne 0 ]]; then
-    log "vLLM indisponible sur cette stack CUDA (fréquent sur Volta). Fallback llama.cpp"
-    if ! command -v llama-server >/dev/null 2>&1; then
-      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake ccache
-      if [[ ! -d /opt/llama.cpp ]]; then
-        sudo git clone --depth 1 https://github.com/ggml-org/llama.cpp /opt/llama.cpp
-      fi
-      sudo cmake -S /opt/llama.cpp -B /opt/llama.cpp/build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
-      sudo cmake --build /opt/llama.cpp/build -j"$(nproc)" --target llama-server
-      sudo ln -sf /opt/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server
-    fi
-    log "télécharge Qwen2.5-14B Instruct Q4_K_M (environ 9 Go)"
-    .venv/bin/huggingface-cli download \
-      Qwen/Qwen2.5-14B-Instruct-GGUF \
-      qwen2.5-14b-instruct-q4_k_m.gguf \
-      --local-dir "$ROOT/models"
-    if grep -q '^V100_MODEL=' .env; then
-      sed -i 's|^V100_MODEL=.*|V100_MODEL=qwen2.5-14b-instruct|' .env
-    fi
-  fi
-
-  log "démarre le serveur : ./scripts/serve-v100.sh"
-  log "puis : .venv/bin/sscraping run --backend v100"
-fi
-
 log "OK"
 echo
 echo "  source .venv/bin/activate"
 echo "  sscraping db-init"
-echo "  sscraping scrape          # fixtures, zéro réseau"
-echo "  sscraping scrape --live   # Scrapy + XPath + PostgreSQL (verbeux, logs/)"
-echo "  sscraping analyze --backend grok"
-echo "  sscraping run --backend grok"
+echo "  sscraping scrape"
+echo "  sscraping scrape --live"
+echo "  sscraping analyze"
+echo "  sscraping triage"
 echo "  sscraping stats"
-echo "  tail -f logs/sscraping.log logs/scrapy.log logs/sql.log"
-if [[ "$WITH_V100" -eq 1 ]]; then
-  echo "  ./scripts/serve-v100.sh   # terminal dédié"
-  echo "  sscraping analyze --backend v100"
-fi
+echo "  tail -f logs/sscraping.log logs/sql.log logs/nlp.log"

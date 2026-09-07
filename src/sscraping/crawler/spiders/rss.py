@@ -18,12 +18,14 @@ log = logging.getLogger("sscraping.crawler")
 class RssSpider(scrapy.Spider):
     name = "rss"
 
-    def __init__(self, source: Source, app_settings: Settings, **kwargs):
+    def __init__(self, source: Source, app_settings: Settings, known_urls: set[str] | None = None, **kwargs):
         super().__init__(name=f"rss-{source.id}", **kwargs)
         self.source = source
         self.app_settings = app_settings
         self.scheduled = 0
         self.download_delay = source.delay_s
+        self.known_urls: set[str] = set(known_urls or [])
+        self.skipped_known = 0
 
     def start_requests(self):
         log.info("START rss spider=%s feed=%s", self.name, self.source.listing_url)
@@ -38,7 +40,14 @@ class RssSpider(scrapy.Spider):
         log.info("FEED status=%s url=%s bytes=%d", response.status, response.url, len(response.body))
         items = parse_feed(response.text, self.source.id, self.source.timezone)
         log.info("FEED entries=%d", len(items))
-        for art in items[: self.app_settings.max_articles]:
+        for art in items:
+            if art.url in self.known_urls:
+                self.skipped_known += 1
+                log.info("SKIP already in PG %s", art.url)
+                continue
+            if self.scheduled >= self.app_settings.max_articles:
+                log.info("plafond max_articles=%s", self.app_settings.max_articles)
+                break
             self.scheduled += 1
             if self.source.article.title or self.source.article.body:
                 log.debug("SCHEDULE rss article %s", art.url)
@@ -76,4 +85,4 @@ class RssSpider(scrapy.Spider):
         log.error("REQUEST FAIL spider=%s url=%s err=%s", self.name, failure.request.url, failure.value)
 
     def closed(self, reason: str) -> None:
-        log.info("CLOSED spider=%s reason=%s scheduled=%d", self.name, reason, self.scheduled)
+        log.info("CLOSED spider=%s reason=%s scheduled=%d skipped_known=%d", self.name, reason, self.scheduled, self.skipped_known)

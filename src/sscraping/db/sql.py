@@ -24,6 +24,8 @@ ORDER BY id DESC
 LIMIT %s
 """
 
+KNOWN_URLS = "SELECT url FROM articles"
+
 MARK_ANALYZED = """
 UPDATE articles SET analyzed_at = now(), analyze_backend = %s WHERE id = %s
 """
@@ -49,4 +51,21 @@ ON CONFLICT (article_id) DO UPDATE SET
   modele_version = EXCLUDED.modele_version,
   raw_model_output = EXCLUDED.raw_model_output,
   created_at = now()
+RETURNING id
+"""
+
+UPSERT_FAIT = """
+INSERT INTO faits (nom_norm, prenom_norm, annee, mois, jour, type_crime, article_id_principal)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (nom_norm, prenom_norm, annee, mois, jour) DO UPDATE SET
+  type_crime = COALESCE(faits.type_crime, EXCLUDED.type_crime)
+RETURNING id
+"""
+
+ATTACH_FAIT = "UPDATE incidents SET fait_id = %s WHERE id = %s"
+
+UNGROUPED = """
+SELECT id, article_id, nom, prenom, annee, mois, jour, type_crime
+FROM incidents
+WHERE is_crime = true
 """

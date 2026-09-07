@@ -1,4 +1,4 @@
-"""Interface unique. Grok et V100 parlent le même dialecte OpenAI /v1/chat/completions."""
+"""Interface LLM. Grok (api.x.ai) parle OpenAI /v1/chat/completions."""
 
 from __future__ import annotations
 

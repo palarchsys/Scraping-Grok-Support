@@ -1,10 +1,7 @@
-.PHONY: install v100 test scrape analyze run stats db db-init scrape-live
+.PHONY: install test scrape analyze run stats triage db db-init scrape-live
 
 install:
 	./install.sh
-
-v100:
-	./install.sh --v100
 
 db:
 	./scripts/init-db.sh
@@ -22,10 +19,13 @@ scrape-live:
 	.venv/bin/sscraping scrape --live
 
 analyze:
-	.venv/bin/sscraping analyze --backend grok
+	.venv/bin/sscraping analyze
 
 run:
-	.venv/bin/sscraping run --backend grok
+	.venv/bin/sscraping run
+
+triage:
+	.venv/bin/sscraping triage
 
 stats:
 	.venv/bin/sscraping stats

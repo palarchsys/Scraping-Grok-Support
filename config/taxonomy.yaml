@@ -1,14 +1,14 @@
 # 8 groupes fermés — partition de tout le crime « faits divers ».
 # Un article criminel a exactement un type_crime. Hors crime : is_crime=false, type_crime=null.
 type_crime:
-  - atteintes_vie              # homicides, assassinats, empoisonnements, tentatives d'homicide
-  - violences_personnes        # coups, blessures, torture, séquestration, enlèvement, menaces de mort
-  - atteintes_sexuelles        # viol, agression sexuelle, harcèlement sexuel, pédocriminalité
-  - atteintes_biens            # vol, cambriolage, extorsion, recel, dégradations, incendie volontaire
-  - stupefiants                # trafic, production, cession, usage de stupéfiants
-  - criminalite_economique     # escroquerie, fraude, faux, blanchiment, cyberarnaque
-  - circulation_securite       # homicides/blessures involontaires routiers, délit de fuite, conduites graves
-  - ordre_public_surete        # terrorisme, otage, émeute, armes, proxénétisme, corruption, harcèlement, outrages
+  - atteintes_vie
+  - violences_personnes
+  - atteintes_sexuelles
+  - atteintes_biens
+  - stupefiants
+  - criminalite_economique
+  - circulation_securite
+  - ordre_public_surete
 
 type_crime_labels:
   atteintes_vie: Atteintes volontaires à la vie
@@ -20,14 +20,8 @@ type_crime_labels:
   circulation_securite: Circulation et accidents
   ordre_public_surete: Ordre public et sûreté
 
-# Préfiltre cheap : si aucun jeton, skip LLM (pas un fait divers criminel).
-prefilter_tokens:
-  - agression
-  - agressé
-  - agressée
-  - agressés
-  - violenté
-  - violentée
+# Un fort → LLM. Deux faibles (ou un faible dans le titre) → LLM.
+prefilter_strong:
   - meurtre
   - assassinat
   - homicide
@@ -37,40 +31,47 @@ prefilter_tokens:
   - tabassé
   - tabassée
   - viol
-  - violences
-  - violence
   - rixe
   - braquage
   - vol avec violence
   - cambriolage
   - cambriolé
-  - vol
-  - recel
-  - incendie
-  - extorsion
-  - menacé
-  - menacée
   - coups et blessures
   - ITT
   - séquestration
   - enlèvement
   - otage
-  - stupéfiant
+  - interpellé
+  - interpellée
+  - mis en examen
   - stupéfiants
-  - cannabis
   - cocaïne
-  - trafic
+  - cannabis
   - escroquerie
-  - arnaque
-  - fraude
   - blanchiment
   - délit de fuite
-  - ivresse au volant
-  - terroriste
   - attentat
+  - terroriste
   - proxénétisme
+
+prefilter_weak:
+  - agression
+  - agressé
+  - agressée
+  - violenté
+  - violentée
+  - violences
+  - violence
+  - menacé
+  - menacée
+  - incendie
+  - extorsion
+  - recel
+  - arnaque
+  - fraude
   - harcèlement
   - corruption
+  - trafic
 
 confidence_threshold: 0.7
-max_article_chars: 8000
+max_article_chars: 1800

@@ -17,7 +17,7 @@ log = logging.getLogger("sscraping.crawler")
 class SiteSpider(scrapy.Spider):
     name = "site"
 
-    def __init__(self, source: Source, app_settings: Settings, **kwargs):
+    def __init__(self, source: Source, app_settings: Settings, known_urls: set[str] | None = None, **kwargs):
         super().__init__(name=f"site-{source.id}", **kwargs)
         self.source = source
         self.app_settings = app_settings
@@ -25,6 +25,8 @@ class SiteSpider(scrapy.Spider):
         self.scheduled = 0
         self.pages = 0
         self.download_delay = source.delay_s
+        self.known_urls: set[str] = set(known_urls or [])
+        self.skipped_known = 0
 
     def start_requests(self):
         src = self.source
@@ -62,6 +64,10 @@ class SiteSpider(scrapy.Spider):
         )
         teasers = parse_listing(response.text, response.url, self.source)
         for art in teasers:
+            if art.url in self.known_urls:
+                self.skipped_known += 1
+                log.info("SKIP already in PG %s", art.url)
+                continue
             if art.url in self.seen_article_urls:
                 continue
             if self.scheduled >= self.app_settings.max_articles:
@@ -128,11 +134,12 @@ class SiteSpider(scrapy.Spider):
 
     def closed(self, reason: str) -> None:
         log.info(
-            "CLOSED spider=%s reason=%s pages=%d scheduled=%d",
+            "CLOSED spider=%s reason=%s pages=%d scheduled=%d skipped_known=%d",
             self.name,
             reason,
             self.pages,
             self.scheduled,
+            self.skipped_known,
         )
         if self.scheduled == 0:
             log.warning("spider=%s zéro article — vérifier XPath / robots / listing_url", self.name)

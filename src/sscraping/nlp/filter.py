@@ -1,32 +1,48 @@
-"""Préfiltre O(n) avant LLM. Si aucun jeton, l'article n'est pas un crime au sens du cahier."""
+"""Préfiltre avant LLM. Fort = 1 hit suffit. Faible = 2 hits (moins de faux positifs)."""
 
 from __future__ import annotations
 
 import re
 from functools import lru_cache
-from pathlib import Path
+from typing import Iterator
 
 import yaml
 
 from sscraping.settings import ROOT
 
 
+def _compile(tok: str) -> re.Pattern[str]:
+    t = tok.lower().strip()
+    if " " in t:
+        return re.compile(re.escape(t), re.I)
+    return re.compile(rf"(?<![\w]){re.escape(t)}(?![\w])", re.I | re.UNICODE)
+
+
 @lru_cache(maxsize=1)
-def _patterns() -> tuple[re.Pattern[str], ...]:
-    path = ROOT / "config" / "taxonomy.yaml"
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-    out: list[re.Pattern[str]] = []
-    for tok in raw.get("prefilter_tokens") or []:
-        t = str(tok).lower().strip()
-        if not t:
-            continue
-        if " " in t:
-            out.append(re.compile(re.escape(t), re.I))
-        else:
-            out.append(re.compile(rf"(?<![\w]){re.escape(t)}(?![\w])", re.I | re.UNICODE))
-    return tuple(out)
+def _token_sets() -> tuple[tuple[re.Pattern[str], ...], tuple[re.Pattern[str], ...]]:
+    raw = yaml.safe_load((ROOT / "config" / "taxonomy.yaml").read_text(encoding="utf-8"))
+    strong = tuple(_compile(t) for t in (raw.get("prefilter_strong") or []) if str(t).strip())
+    weak = tuple(_compile(t) for t in (raw.get("prefilter_weak") or []) if str(t).strip())
+    return strong, weak
+
+
+def iter_hits(blob: str) -> Iterator[re.Match[str]]:
+    strong, weak = _token_sets()
+    for p in (*strong, *weak):
+        m = p.search(blob)
+        if m:
+            yield m
 
 
 def might_be_crime(titre: str, texte: str) -> bool:
-    blob = f"{titre}\n{texte}"
-    return any(p.search(blob) for p in _patterns())
+    title = titre or ""
+    body = f"{title}\n{texte}"
+    strong, weak = _token_sets()
+    if any(p.search(body) for p in strong):
+        return True
+    weak_hits = sum(1 for p in weak if p.search(body))
+    if weak_hits >= 2:
+        return True
+    if any(p.search(title) for p in weak) and weak_hits >= 1:
+        return True
+    return False

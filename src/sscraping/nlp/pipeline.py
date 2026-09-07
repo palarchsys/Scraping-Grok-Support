@@ -1,4 +1,4 @@
-"""Orchestration étape 2 : préfiltre → LLM JSON → Pydantic → SQL."""
+"""Orchestration étape 2 : préfiltre → texte compressé → Grok JSON → preuves locales → SQL."""
 
 from __future__ import annotations
 
@@ -10,52 +10,23 @@ import orjson
 from pydantic import ValidationError
 
 from sscraping.db.store import Store
+from sscraping.nlp.compress import compress_for_llm
 from sscraping.nlp.connectors.base import LlmConnector
 from sscraping.nlp.filter import might_be_crime
+from sscraping.nlp.preuves import local_preuves
 from sscraping.nlp.schema import IncidentExtraction
 from sscraping.settings import Settings
 
 log = logging.getLogger("sscraping.nlp")
 
-SYSTEM_PROMPT = """Tu es un extracteur JSON pour un exercice pédagogique.
-Tu lis UN article de presse. Tu ne juges pas, tu n'inventes pas.
-Réponds UNIQUEMENT un objet JSON de ce schéma :
-{
-  "is_crime": boolean,
-  "type_crime": null | "atteintes_vie"|"violences_personnes"|"atteintes_sexuelles"|"atteintes_biens"|"stupefiants"|"criminalite_economique"|"circulation_securite"|"ordre_public_surete",
-  "auteur": {
-    "nom": string|null,
-    "prenom": string|null,
-    "nationalite": string|null,
-    "age": int|null,
-    "pays_origine": string|null
-  },
-  "faits": {"annee": int|null, "mois": int|null, "jour": int|null},
-  "confidence": number,
-  "preuves": string[]
-}
-is_crime=true seulement si l'article décrit un crime ou un délit de faits divers (pas un débat, un match, un budget, une métaphore).
-type_crime : exactement UN des 8 groupes, obligatoire si is_crime=true, null sinon.
-- atteintes_vie : meurtre, assassinat, empoisonnement, tentative d'homicide
-- violences_personnes : coups, blessures, torture, séquestration, enlèvement, menaces de mort
-- atteintes_sexuelles : viol, agression sexuelle, harcèlement sexuel, pédocriminalité
-- atteintes_biens : vol, cambriolage, extorsion, recel, dégradations, incendie volontaire, braquage
-- stupefiants : trafic, production, cession, usage de stupéfiants
-- criminalite_economique : escroquerie, fraude, faux, blanchiment, cyberarnaque
-- circulation_securite : homicide/blessures involontaires routiers, délit de fuite, conduites graves
-- ordre_public_surete : terrorisme, otage, émeute, armes, proxénétisme, corruption, harcèlement, outrages — tout crime hors des 7 autres
-Si plusieurs faits, prends le plus grave (vie > sexuel > violences > reste).
-Date = date des FAITS, pas la publication, pas l'audience.
-nationalite / pays_origine : uniquement si le texte les écrit. Sinon null. Interdit d'inférer.
-nom/prenom : seulement si identifiés. « un homme » → tout null.
-confidence < 0.7 si le texte est ambigu (victime vs auteur, plusieurs personnes).
-preuves : 1 à 3 citations courtes copiées du texte.
+# Prompt statique (identique à chaque appel) → cache de préfixe côté API.
+SYSTEM_PROMPT = """Extracteur JSON pédagogique. N'invente rien. JSON uniquement :
+{"is_crime":bool,"type_crime":null|"atteintes_vie"|"violences_personnes"|"atteintes_sexuelles"|"atteintes_biens"|"stupefiants"|"criminalite_economique"|"circulation_securite"|"ordre_public_surete","auteur":{"nom":str|null,"prenom":str|null,"nationalite":str|null,"age":int|null,"pays_origine":str|null},"faits":{"annee":int|null,"mois":int|null,"jour":int|null},"confidence":0..1}
+is_crime si crime/délit de faits divers. type_crime = 1 des 8 si crime, sinon null.
+Priorité type : vie > sexuel > violences > reste.
+faits = date des faits (pas parution). Identité seulement si écrite. « un homme » → nulls.
+confidence < 0.7 si ambigu.
 """
-
-
-def _user_payload(titre: str, texte: str, max_chars: int) -> str:
-    body = texte[:max_chars]
-    return f"TITRE: {titre}\n\nTEXTE:\n{body}"
 
 
 async def analyze_one(
@@ -63,18 +34,16 @@ async def analyze_one(
     titre: str,
     texte: str,
     threshold: float,
-    max_chars: int = 8000,
+    max_chars: int = 1800,
 ) -> tuple[IncidentExtraction, str]:
     if not might_be_crime(titre, texte):
         log.info("préfiltre SKIP titre=%r", titre[:80])
         ext = IncidentExtraction(is_crime=False, type_crime=None, confidence=1.0, preuves=[])
         return ext, "{}"
 
-    log.info("préfiltre HIT titre=%r chars=%d → LLM", titre[:80], len(texte))
-    raw_obj: dict[str, Any] = await connector.complete_json(
-        SYSTEM_PROMPT,
-        _user_payload(titre, texte, max_chars),
-    )
+    user = compress_for_llm(titre, texte, max_chars=max_chars)
+    log.info("préfiltre HIT titre=%r src_chars=%d prompt_chars=%d → LLM", titre[:80], len(texte), len(user))
+    raw_obj: dict[str, Any] = await connector.complete_json(SYSTEM_PROMPT, user)
     raw = orjson.dumps(raw_obj).decode()
     try:
         ext = IncidentExtraction.model_validate(raw_obj)
@@ -83,22 +52,21 @@ async def analyze_one(
         ext = IncidentExtraction(is_crime=False, type_crime=None, confidence=0.0, preuves=[])
         return ext, raw
 
+    ext.preuves = local_preuves(titre, texte)
     if ext.confidence < threshold:
-        log.info("confidence %.2f < seuil %.2f — on stocke quand même les champs extraits", ext.confidence, threshold)
+        log.info("confidence %.2f < seuil %.2f — champs extraits conservés", ext.confidence, threshold)
     return ext, raw
 
 
 async def run_analyze(store: Store, connector: LlmConnector, settings: Settings) -> int:
-    """LLM en parallèle (nlp_concurrency), écritures PostgreSQL en série."""
     rows = await store.pending_analysis(limit=settings.max_articles)
     if not rows:
         log.info("rien à analyser")
         return 0
     log.info(
-        "analyze batch=%d concurrency=%d backend=%s/%s",
+        "analyze batch=%d concurrency=%d model=%s",
         len(rows),
         settings.nlp_concurrency,
-        connector.name,
         connector.model,
     )
     sem = asyncio.Semaphore(max(1, settings.nlp_concurrency))
@@ -110,6 +78,7 @@ async def run_analyze(store: Store, connector: LlmConnector, settings: Settings)
                 row["titre"],
                 row["texte"],
                 settings.confidence_threshold,
+                max_chars=settings.llm_max_chars,
             )
             return row, ext, raw
 
@@ -126,4 +95,6 @@ async def run_analyze(store: Store, connector: LlmConnector, settings: Settings)
         await store.mark_analyzed(row["id"], backend)
         done += 1
         log.info("analyzed id=%s crime=%s type=%s", row["id"], ext.is_crime, ext.type_crime)
+    grouped = await store.triage()
+    log.info("triage rattachements=%d", grouped)
     return done

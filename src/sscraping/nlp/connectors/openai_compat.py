@@ -1,4 +1,4 @@
-"""Client unique OpenAI `/v1/chat/completions`. Grok et V100 ne changent que l'URL."""
+"""Client OpenAI `/v1/chat/completions` (Grok / api.x.ai). Prompt systeme identique = cache préfixe."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ class OpenAICompatConnector:
                 json={
                     "model": self.model,
                     "temperature": 0,
-                    "max_tokens": 700,
+                    "max_tokens": 280,
                     "response_format": {"type": "json_object"},
                     "messages": [
                         {"role": "system", "content": system},

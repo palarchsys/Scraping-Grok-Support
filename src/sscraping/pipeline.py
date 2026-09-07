@@ -7,7 +7,6 @@ import logging
 
 from sscraping.db.store import Store
 from sscraping.nlp.connectors.grok import GrokConnector
-from sscraping.nlp.connectors.v100 import V100Connector
 from sscraping.nlp.pipeline import run_analyze
 from sscraping.scrape.base import ScrapedArticle
 from sscraping.scrape.normalize import parse_date
@@ -44,18 +43,14 @@ def scrape_live(settings: Settings, source_id: str | None = None) -> int:
     return run_crawl(settings, source_id=source_id)
 
 
-def make_connector(backend: str, settings: Settings):
-    if backend == "grok":
-        return GrokConnector(settings)
-    if backend == "v100":
-        return V100Connector(settings)
-    raise ValueError("backend doit être grok ou v100")
+def make_connector(settings: Settings) -> GrokConnector:
+    return GrokConnector(settings)
 
 
-async def run_analyze_only(settings: Settings, backend: str) -> dict[str, int]:
+async def run_analyze_only(settings: Settings) -> dict[str, int]:
     store = Store(settings.database_url)
     await store.open()
-    connector = make_connector(backend, settings)
+    connector = make_connector(settings)
     try:
         analyzed = await run_analyze(store, connector, settings)
         counts = await store.counts()
@@ -66,12 +61,12 @@ async def run_analyze_only(settings: Settings, backend: str) -> dict[str, int]:
         await store.close()
 
 
-async def run_demo_then_analyze(settings: Settings, backend: str) -> dict[str, int]:
+async def run_demo_then_analyze(settings: Settings) -> dict[str, int]:
     store = Store(settings.database_url)
     await store.open()
     try:
         scraped = await scrape_demo(store, settings)
-        connector = make_connector(backend, settings)
+        connector = make_connector(settings)
         try:
             analyzed = await run_analyze(store, connector, settings)
         finally:

@@ -1,4 +1,4 @@
--- PostgreSQL. Identités en clair dans incidents (pas de masquage SQL).
+-- PostgreSQL. Identités en clair. Un fait = nom+prénom+date (triage anti-doublon).
 
 CREATE TABLE IF NOT EXISTS articles (
   id BIGSERIAL PRIMARY KEY,
@@ -17,14 +17,25 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE INDEX IF NOT EXISTS idx_articles_analyzed ON articles (analyzed_at);
 CREATE INDEX IF NOT EXISTS idx_articles_source ON articles (source);
 
+CREATE TABLE IF NOT EXISTS faits (
+  id BIGSERIAL PRIMARY KEY,
+  nom_norm TEXT NOT NULL,
+  prenom_norm TEXT NOT NULL,
+  annee INTEGER NOT NULL,
+  mois INTEGER NOT NULL,
+  jour INTEGER NOT NULL,
+  type_crime TEXT,
+  article_id_principal BIGINT REFERENCES articles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (nom_norm, prenom_norm, annee, mois, jour)
+);
+
 CREATE TABLE IF NOT EXISTS incidents (
   id BIGSERIAL PRIMARY KEY,
   article_id BIGINT NOT NULL UNIQUE REFERENCES articles(id) ON DELETE CASCADE,
+  fait_id BIGINT REFERENCES faits(id) ON DELETE SET NULL,
   is_crime BOOLEAN NOT NULL DEFAULT true,
   type_crime TEXT NOT NULL,
-  -- type_crime ∈ 8 groupes : atteintes_vie, violences_personnes, atteintes_sexuelles,
-  -- atteintes_biens, stupefiants, criminalite_economique, circulation_securite, ordre_public_surete
-  -- Identités en clair telles qu'extraites. NULL = absent du texte.
   nom TEXT,
   prenom TEXT,
   nationalite TEXT,
@@ -52,3 +63,4 @@ CREATE TABLE IF NOT EXISTS incidents (
 
 CREATE INDEX IF NOT EXISTS idx_incidents_article ON incidents (article_id);
 CREATE INDEX IF NOT EXISTS idx_incidents_type ON incidents (type_crime);
+CREATE INDEX IF NOT EXISTS idx_incidents_fait ON incidents (fait_id);

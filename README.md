@@ -14,12 +14,12 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 | HTML | parsel / XPath | listes paginées + intra-article |
 | RSS | Scrapy + lxml | `kind: rss` optionnel |
 | SQL | PostgreSQL + psycopg3 | identités en clair, upsert URL |
-| NLP | asyncio + httpx | Grok API / V100 `/v1` |
+| NLP | asyncio + httpx | Grok API (`grok-4.5`) |
 | Logs | `logs/*.log` rotatifs | scrape / sql / nlp / scrapy |
 | Contrat | pydantic v2 | JSON LLM refusé si hors schéma |
 | CLI | typer | `sscraping scrape \| analyze \| run` |
 
-Étape 2 **oui sur V100 32 Go** : 14B AWQ (vLLM) ou 14B GGUF Q4 (llama.cpp). Pas de 70B.
+Étape 2 : Grok uniquement. Prompt compressé (lead + phrases clés), `max_tokens=280`.
 
 ## Deux étapes
 
@@ -33,7 +33,7 @@ config/sources.yaml (blocs site)
    articles PostgreSQL (titre, texte, url, date)
         │
         ▼
-   préfiltre → Grok | V100 → incidents
+   préfiltre → Grok → incidents → faits (nom+prénom+date)
 ```
 
 ## Inputs
@@ -44,7 +44,7 @@ config/sources.yaml (blocs site)
 | `config/taxonomy.yaml` | 8 groupes de crime + tokens préfiltre |
 | `.env` | Clés, plafonds, backend |
 | `fixtures/` | Hors-ligne (tests) — pas le crawl live |
-| CLI | `scrape --live`, `analyze --backend grok\|v100` |
+| CLI | `scrape --live`, `analyze`, `triage` |
 
 Exemple de bloc site :
 
@@ -76,14 +76,11 @@ Défaut : fixtures locales, **zéro réseau**. Live : `sscraping scrape --live` 
 
 ### Étape 2 — analyse
 
-Deux connecteurs, **même** interface OpenAI `/v1/chat/completions` :
+Connecteur unique : API xAI `grok-4.5`. Préfiltre (1 fort / 2 faibles) → texte compressé ≤1800c → JSON court (`max_tokens=280`) → preuves locales.
 
-| `--backend` | Où | Matériel |
-|---|---|---|
-| `grok` | API xAI (`grok-4.5`) | aucune GPU |
-| `v100` | `http://127.0.0.1:8000/v1` | NVIDIA V100 **32 Go** |
+`is_crime` + `type_crime` (8 groupes). Puis **triage** : un `fait` = même nom + prénom + date (normalisés). Sans les trois, pas de fusion.
 
-Préfiltre regex → LLM JSON → Pydantic → PostgreSQL. `is_crime` + `type_crime` (8 groupes). Identités en clair. `confidence` conservé.
+Identités en clair. `confidence` conservé.
 
 | `type_crime` | Couvre |
 |---|---|
@@ -103,32 +100,22 @@ git clone https://github.com/palarchsys/ss-craping-bot.git
 cd ss-craping-bot
 chmod +x install.sh
 ./install.sh
-# GPU local :
-./install.sh --v100
 ```
 
-Éditer `.env` : `DATABASE_URL=...` et `XAI_API_KEY=...` pour Grok.
+Éditer `.env` : `DATABASE_URL=...` et `XAI_API_KEY=...`.
 
 ```bash
 source .venv/bin/activate
 sscraping db-init
-sscraping scrape                 # fixtures → PostgreSQL
-sscraping scrape --live          # Scrapy, logs DEBUG dans logs/
-sscraping analyze --backend grok
-sscraping run --backend v100     # serveur local déjà lancé
+sscraping scrape
+sscraping scrape --live
+sscraping analyze
+sscraping triage
 sscraping stats
-tail -f logs/sscraping.log logs/sql.log logs/scrapy.log
 pytest -q
 ```
 
-V100 :
-
-```bash
-./scripts/serve-v100.sh          # terminal dédié
-sscraping analyze --backend v100
-```
-
-Live HTTP (opt-in) : `sscraping scrape --live`.
+Live HTTP (opt-in) : `sscraping scrape --live` (skip URL déjà en base).
 
 Autre OS (dev) : `ALLOW_OTHER_OS=1 ./install.sh`.
 
@@ -136,7 +123,9 @@ Autre OS (dev) : `ALLOW_OTHER_OS=1 ./install.sh`.
 
 - [`AGENTS.md`](AGENTS.md) — stack, layout, règles
 - [`AGENTS.scrape.md`](AGENTS.scrape.md) — étape 1
-- [`AGENTS.nlp.md`](AGENTS.nlp.md) — étape 2 + V100
+- [`AGENTS.nlp.md`](AGENTS.nlp.md) — étape 2 Grok
+- [`AGENTS.install.md`](AGENTS.install.md) — Ubuntu 26.04
+
 - [`AGENTS.install.md`](AGENTS.install.md) — Ubuntu 26.04 / GPU
 
 ## Licence
