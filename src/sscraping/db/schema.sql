@@ -20,7 +20,10 @@ CREATE INDEX IF NOT EXISTS idx_articles_source ON articles (source);
 CREATE TABLE IF NOT EXISTS incidents (
   id BIGSERIAL PRIMARY KEY,
   article_id BIGINT NOT NULL UNIQUE REFERENCES articles(id) ON DELETE CASCADE,
-  categorie TEXT NOT NULL,
+  is_crime BOOLEAN NOT NULL DEFAULT true,
+  type_crime TEXT NOT NULL,
+  -- type_crime ∈ 8 groupes : atteintes_vie, violences_personnes, atteintes_sexuelles,
+  -- atteintes_biens, stupefiants, criminalite_economique, circulation_securite, ordre_public_surete
   -- Identités en clair telles qu'extraites. NULL = absent du texte.
   nom TEXT,
   prenom TEXT,
@@ -34,7 +37,18 @@ CREATE TABLE IF NOT EXISTS incidents (
   preuves TEXT NOT NULL DEFAULT '[]',
   modele_version TEXT NOT NULL,
   raw_model_output TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT incidents_type_crime_chk CHECK (type_crime IN (
+    'atteintes_vie',
+    'violences_personnes',
+    'atteintes_sexuelles',
+    'atteintes_biens',
+    'stupefiants',
+    'criminalite_economique',
+    'circulation_securite',
+    'ordre_public_surete'
+  ))
 );
 
 CREATE INDEX IF NOT EXISTS idx_incidents_article ON incidents (article_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_type ON incidents (type_crime);

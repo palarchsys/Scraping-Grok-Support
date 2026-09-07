@@ -6,7 +6,7 @@ PostgreSQL stocke les identités **en clair** telles qu’extraites de l’artic
 ## Objectif
 Deux pipelines découplés :
 1. scrape (Scrapy) → `articles(titre, texte, url, date_publication)`
-2. nlp → si sujet ≠ agression : skip ; sinon extraire nom, prenom, nationalite, age, pays_origine, annee, mois, jour (vide si absent)
+2. nlp → si sujet ≠ crime : skip ; sinon `type_crime` (8 groupes) + extraire nom, prenom, nationalite, age, pays_origine, annee, mois, jour (vide si absent)
 
 ## Stack (ne pas changer sans raison mesurable)
 Python ≥3.12 · Scrapy + parsel XPath · PostgreSQL + psycopg3 · asyncio NLP · httpx (LLM) · pydantic v2 · PyYAML · typer

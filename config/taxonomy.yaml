@@ -1,14 +1,26 @@
-labels:
-  - non_agression
-  - violence_physique
-  - agression_sexuelle
-  - homicide
-  - tentative
-  - menace
-  - vol_avec_violence
-  - autre_agression
+# 8 groupes fermés — partition de tout le crime « faits divers ».
+# Un article criminel a exactement un type_crime. Hors crime : is_crime=false, type_crime=null.
+type_crime:
+  - atteintes_vie              # homicides, assassinats, empoisonnements, tentatives d'homicide
+  - violences_personnes        # coups, blessures, torture, séquestration, enlèvement, menaces de mort
+  - atteintes_sexuelles        # viol, agression sexuelle, harcèlement sexuel, pédocriminalité
+  - atteintes_biens            # vol, cambriolage, extorsion, recel, dégradations, incendie volontaire
+  - stupefiants                # trafic, production, cession, usage de stupéfiants
+  - criminalite_economique     # escroquerie, fraude, faux, blanchiment, cyberarnaque
+  - circulation_securite       # homicides/blessures involontaires routiers, délit de fuite, conduites graves
+  - ordre_public_surete        # terrorisme, otage, émeute, armes, proxénétisme, corruption, harcèlement, outrages
 
-# Préfiltre cheap : si aucun jeton, skip LLM.
+type_crime_labels:
+  atteintes_vie: Atteintes volontaires à la vie
+  violences_personnes: Violences aux personnes
+  atteintes_sexuelles: Atteintes sexuelles
+  atteintes_biens: Atteintes aux biens
+  stupefiants: Stupéfiants
+  criminalite_economique: Criminalité économique et numérique
+  circulation_securite: Circulation et accidents
+  ordre_public_surete: Ordre public et sûreté
+
+# Préfiltre cheap : si aucun jeton, skip LLM (pas un fait divers criminel).
 prefilter_tokens:
   - agression
   - agressé
@@ -30,10 +42,35 @@ prefilter_tokens:
   - rixe
   - braquage
   - vol avec violence
+  - cambriolage
+  - cambriolé
+  - vol
+  - recel
+  - incendie
+  - extorsion
   - menacé
   - menacée
   - coups et blessures
   - ITT
+  - séquestration
+  - enlèvement
+  - otage
+  - stupéfiant
+  - stupéfiants
+  - cannabis
+  - cocaïne
+  - trafic
+  - escroquerie
+  - arnaque
+  - fraude
+  - blanchiment
+  - délit de fuite
+  - ivresse au volant
+  - terroriste
+  - attentat
+  - proxénétisme
+  - harcèlement
+  - corruption
 
 confidence_threshold: 0.7
 max_article_chars: 8000

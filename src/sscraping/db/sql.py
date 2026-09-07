@@ -30,11 +30,12 @@ UPDATE articles SET analyzed_at = now(), analyze_backend = %s WHERE id = %s
 
 UPSERT_INCIDENT = """
 INSERT INTO incidents (
-  article_id, categorie, nom, prenom, nationalite, age, pays_origine,
+  article_id, is_crime, type_crime, nom, prenom, nationalite, age, pays_origine,
   annee, mois, jour, confidence, preuves, modele_version, raw_model_output
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (article_id) DO UPDATE SET
-  categorie = EXCLUDED.categorie,
+  is_crime = EXCLUDED.is_crime,
+  type_crime = EXCLUDED.type_crime,
   nom = EXCLUDED.nom,
   prenom = EXCLUDED.prenom,
   nationalite = EXCLUDED.nationalite,

@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from sscraping.db.store import Store
 from sscraping.nlp.connectors.base import LlmConnector
-from sscraping.nlp.filter import might_be_aggression
+from sscraping.nlp.filter import might_be_crime
 from sscraping.nlp.schema import IncidentExtraction
 from sscraping.settings import Settings
 
@@ -21,9 +21,9 @@ SYSTEM_PROMPT = """Tu es un extracteur JSON pour un exercice pédagogique.
 Tu lis UN article de presse. Tu ne juges pas, tu n'inventes pas.
 Réponds UNIQUEMENT un objet JSON de ce schéma :
 {
-  "is_aggression": boolean,
-  "categorie": "non_agression"|"violence_physique"|"agression_sexuelle"|"homicide"|"tentative"|"menace"|"vol_avec_violence"|"autre_agression",
-  "agresseur": {
+  "is_crime": boolean,
+  "type_crime": null | "atteintes_vie"|"violences_personnes"|"atteintes_sexuelles"|"atteintes_biens"|"stupefiants"|"criminalite_economique"|"circulation_securite"|"ordre_public_surete",
+  "auteur": {
     "nom": string|null,
     "prenom": string|null,
     "nationalite": string|null,
@@ -34,13 +34,22 @@ Réponds UNIQUEMENT un objet JSON de ce schéma :
   "confidence": number,
   "preuves": string[]
 }
-Règles :
-- is_aggression=true seulement si l'article décrit une agression / infraction violente (pas un débat, un match, une métaphore).
-- Date = date des FAITS, pas la date de publication, pas l'audience.
-- nationalite / pays_origine : uniquement si le texte les écrit clairement. Sinon null. Interdit d'inférer.
-- nom/prenom : seulement si identifiés. « un homme » → tout null.
-- confidence < 0.7 si le texte est ambigu (victime vs auteur, plusieurs personnes).
-- preuves : 1 à 3 citations courtes copiées du texte.
+is_crime=true seulement si l'article décrit un crime ou un délit de faits divers (pas un débat, un match, un budget, une métaphore).
+type_crime : exactement UN des 8 groupes, obligatoire si is_crime=true, null sinon.
+- atteintes_vie : meurtre, assassinat, empoisonnement, tentative d'homicide
+- violences_personnes : coups, blessures, torture, séquestration, enlèvement, menaces de mort
+- atteintes_sexuelles : viol, agression sexuelle, harcèlement sexuel, pédocriminalité
+- atteintes_biens : vol, cambriolage, extorsion, recel, dégradations, incendie volontaire, braquage
+- stupefiants : trafic, production, cession, usage de stupéfiants
+- criminalite_economique : escroquerie, fraude, faux, blanchiment, cyberarnaque
+- circulation_securite : homicide/blessures involontaires routiers, délit de fuite, conduites graves
+- ordre_public_surete : terrorisme, otage, émeute, armes, proxénétisme, corruption, harcèlement, outrages — tout crime hors des 7 autres
+Si plusieurs faits, prends le plus grave (vie > sexuel > violences > reste).
+Date = date des FAITS, pas la publication, pas l'audience.
+nationalite / pays_origine : uniquement si le texte les écrit. Sinon null. Interdit d'inférer.
+nom/prenom : seulement si identifiés. « un homme » → tout null.
+confidence < 0.7 si le texte est ambigu (victime vs auteur, plusieurs personnes).
+preuves : 1 à 3 citations courtes copiées du texte.
 """
 
 
@@ -56,9 +65,9 @@ async def analyze_one(
     threshold: float,
     max_chars: int = 8000,
 ) -> tuple[IncidentExtraction, str]:
-    if not might_be_aggression(titre, texte):
+    if not might_be_crime(titre, texte):
         log.info("préfiltre SKIP titre=%r", titre[:80])
-        ext = IncidentExtraction(is_aggression=False, categorie="non_agression", confidence=1.0, preuves=[])
+        ext = IncidentExtraction(is_crime=False, type_crime=None, confidence=1.0, preuves=[])
         return ext, "{}"
 
     log.info("préfiltre HIT titre=%r chars=%d → LLM", titre[:80], len(texte))
@@ -71,11 +80,9 @@ async def analyze_one(
         ext = IncidentExtraction.model_validate(raw_obj)
     except ValidationError as exc:
         log.warning("JSON hors contrat: %s", exc)
-        ext = IncidentExtraction(is_aggression=False, categorie="non_agression", confidence=0.0, preuves=[])
+        ext = IncidentExtraction(is_crime=False, type_crime=None, confidence=0.0, preuves=[])
         return ext, raw
 
-    # Identités : telles qu'extraites. NULL seulement si le modèle n'a rien lu dans l'article.
-    # Pas de masquage ici — l'affichage GUI (hors dépôt) masque. confidence reste un score.
     if ext.confidence < threshold:
         log.info("confidence %.2f < seuil %.2f — on stocke quand même les champs extraits", ext.confidence, threshold)
     return ext, raw
@@ -87,7 +94,13 @@ async def run_analyze(store: Store, connector: LlmConnector, settings: Settings)
     if not rows:
         log.info("rien à analyser")
         return 0
-    log.info("analyze batch=%d concurrency=%d backend=%s/%s", len(rows), settings.nlp_concurrency, connector.name, connector.model)
+    log.info(
+        "analyze batch=%d concurrency=%d backend=%s/%s",
+        len(rows),
+        settings.nlp_concurrency,
+        connector.name,
+        connector.model,
+    )
     sem = asyncio.Semaphore(max(1, settings.nlp_concurrency))
 
     async def _job(row: Any) -> tuple[Any, IncidentExtraction, str]:
@@ -108,9 +121,9 @@ async def run_analyze(store: Store, connector: LlmConnector, settings: Settings)
             log.exception("analyse échouée: %s", item)
             continue
         row, ext, raw = item
-        if ext.is_aggression:
+        if ext.is_crime:
             await store.insert_incident(row["id"], ext, backend, raw)
         await store.mark_analyzed(row["id"], backend)
         done += 1
-        log.info("analyzed id=%s aggression=%s cat=%s", row["id"], ext.is_aggression, ext.categorie)
+        log.info("analyzed id=%s crime=%s type=%s", row["id"], ext.is_crime, ext.type_crime)
     return done

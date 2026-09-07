@@ -1,6 +1,6 @@
 # ss-craping-bot
 
-Bot pédagogique en deux étapes : **collecte** d’articles de presse, puis **analyse** du sujet. Si le sujet n’est pas une forme d’agression, on passe. Sinon on extrait nom, prénom, nationalité, âge, pays d’origine, année / mois / jour des faits — vide si absent du texte.
+Bot pédagogique en deux étapes : **collecte** d’articles de presse, puis **analyse** du sujet. Si ce n’est pas un crime, on passe. Sinon on assigne **un des 8 groupes** et on extrait nom, prénom, nationalité, âge, pays d’origine, année / mois / jour des faits — vide si absent du texte.
 
 La table `incidents` stocke ces champs **en clair** (ce que l’article écrit). Aucun masquage SQL. Une GUI future masquera à l’affichage ; elle n’est pas dans ce dépôt.
 
@@ -41,7 +41,7 @@ config/sources.yaml (blocs site)
 | Input | Rôle |
 |---|---|
 | `config/sources.yaml` | **Blocs site** : `id`, `listing_url`, XPath pagination, XPath liste, XPath article |
-| `config/taxonomy.yaml` | Labels d’agression + tokens préfiltre |
+| `config/taxonomy.yaml` | 8 groupes de crime + tokens préfiltre |
 | `.env` | Clés, plafonds, backend |
 | `fixtures/` | Hors-ligne (tests) — pas le crawl live |
 | CLI | `scrape --live`, `analyze --backend grok\|v100` |
@@ -83,7 +83,18 @@ Deux connecteurs, **même** interface OpenAI `/v1/chat/completions` :
 | `grok` | API xAI (`grok-4.5`) | aucune GPU |
 | `v100` | `http://127.0.0.1:8000/v1` | NVIDIA V100 **32 Go** |
 
-Préfiltre regex → LLM JSON → Pydantic → SQL. Identités stockées telles quelles. `confidence` est conservé à côté.
+Préfiltre regex → LLM JSON → Pydantic → PostgreSQL. `is_crime` + `type_crime` (8 groupes). Identités en clair. `confidence` conservé.
+
+| `type_crime` | Couvre |
+|---|---|
+| `atteintes_vie` | homicides, assassinats, tentatives |
+| `violences_personnes` | coups, séquestration, menaces de mort |
+| `atteintes_sexuelles` | viol, agressions sexuelles |
+| `atteintes_biens` | vol, cambriolage, incendie, extorsion |
+| `stupefiants` | trafic, production, usage |
+| `criminalite_economique` | escroquerie, fraude, cyberarnaque |
+| `circulation_securite` | accidents graves, délit de fuite |
+| `ordre_public_surete` | terrorisme, otage, armes, le reste |
 
 ## Install Ubuntu 26.04
 

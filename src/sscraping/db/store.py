@@ -98,28 +98,29 @@ class Store:
         backend: str,
         raw: str,
     ) -> None:
-        if not ext.is_aggression:
-            log.debug("skip incident id=%s is_aggression=false", article_id)
+        if not ext.is_crime:
+            log.debug("skip incident id=%s is_crime=false", article_id)
             return
         log.info(
-            "UPSERT incident article_id=%s cat=%s nom=%s prenom=%s age=%s conf=%.2f",
+            "UPSERT incident article_id=%s type=%s nom=%s prenom=%s age=%s conf=%.2f",
             article_id,
-            ext.categorie,
-            ext.agresseur.nom,
-            ext.agresseur.prenom,
-            ext.agresseur.age,
+            ext.type_crime,
+            ext.auteur.nom,
+            ext.auteur.prenom,
+            ext.auteur.age,
             ext.confidence,
         )
         await self.db.execute(
             Q.UPSERT_INCIDENT,
             (
                 article_id,
-                ext.categorie,
-                ext.agresseur.nom,
-                ext.agresseur.prenom,
-                ext.agresseur.nationalite,
-                ext.agresseur.age,
-                ext.agresseur.pays_origine,
+                ext.is_crime,
+                ext.type_crime,
+                ext.auteur.nom,
+                ext.auteur.prenom,
+                ext.auteur.nationalite,
+                ext.auteur.age,
+                ext.auteur.pays_origine,
                 ext.faits.annee,
                 ext.faits.mois,
                 ext.faits.jour,

@@ -8,9 +8,9 @@ class Dummy:
 
     async def complete_json(self, system: str, user: str) -> dict:
         return {
-            "is_aggression": True,
-            "categorie": "violence_physique",
-            "agresseur": {
+            "is_crime": True,
+            "type_crime": "violences_personnes",
+            "auteur": {
                 "nom": "Lefevre",
                 "prenom": "Marc",
                 "nationalite": "française",
@@ -35,11 +35,12 @@ class DummyLow(Dummy):
 
 async def test_budget_skipped_without_llm() -> None:
     ext, raw = await analyze_one(Dummy(), "Budget", "Les élus votent le budget", 0.7)
-    assert ext.categorie == "non_agression"
+    assert ext.is_crime is False
+    assert ext.type_crime is None
     assert raw == "{}"
 
 
-async def test_aggression_extracted() -> None:
+async def test_crime_extracted() -> None:
     ext, _ = await analyze_one(
         Dummy(),
         "Agression à coups de poing",
@@ -47,8 +48,9 @@ async def test_aggression_extracted() -> None:
         0.7,
     )
     assert isinstance(ext, IncidentExtraction)
-    assert ext.is_aggression
-    assert ext.agresseur.nom == "Lefevre"
+    assert ext.is_crime
+    assert ext.type_crime == "violences_personnes"
+    assert ext.auteur.nom == "Lefevre"
 
 
 async def test_low_confidence_keeps_identity() -> None:
@@ -58,7 +60,7 @@ async def test_low_confidence_keeps_identity() -> None:
         "un homme a été agressé à coups de poing",
         0.7,
     )
-    assert ext.is_aggression
-    assert ext.agresseur.nom == "Lefevre"
-    assert ext.agresseur.prenom == "Marc"
+    assert ext.is_crime
+    assert ext.auteur.nom == "Lefevre"
+    assert ext.auteur.prenom == "Marc"
     assert ext.confidence == 0.51
