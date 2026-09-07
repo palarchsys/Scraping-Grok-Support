@@ -1,0 +1,36 @@
+# Sources pédagogiques. RSS d'abord (stable, moins invasif que le crawl HTML).
+# enabled: false par défaut pour le live ; DEMO ignore ceci et lit fixtures/.
+defaults:
+  timezone: Europe/Paris
+  delay_s: 0.4
+
+sources:
+  - id: francetvinfo
+    enabled: true
+    kind: rss
+    listing: https://www.francetvinfo.fr/titres.rss
+    article_selectors:
+      title: "h1"
+      body: "div.c-body, article"
+      date: "time"
+    timezone: Europe/Paris
+
+  - id: lemonde_une
+    enabled: true
+    kind: rss
+    listing: https://www.lemonde.fr/rss/une.xml
+    article_selectors:
+      title: "h1"
+      body: "article, .article__content"
+      date: "time"
+    timezone: Europe/Paris
+
+  - id: franceinfo_faits_divers
+    enabled: true
+    kind: rss
+    listing: https://www.francetvinfo.fr/faits-divers.rss
+    article_selectors:
+      title: "h1"
+      body: "div.c-body, article"
+      date: "time"
+    timezone: Europe/Paris

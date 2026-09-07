@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Démo pédagogique</title>
+    <item>
+      <title>Le conseil municipal vote le budget 2026</title>
+      <link>https://example.invalid/pedago/budget-municipal</link>
+      <pubDate>Wed, 15 Jan 2026 18:00:00 +0100</pubDate>
+      <description>Les élus ont adopté le budget primitif. Texte fictif.</description>
+    </item>
+  </channel>
+</rss>

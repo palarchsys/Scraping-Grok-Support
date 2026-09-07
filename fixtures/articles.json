@@ -1,0 +1,30 @@
+[
+  {
+    "source": "demo",
+    "url": "https://example.invalid/pedago/agression-fictive-1",
+    "titre": "Agression à coups de poing près d'une gare : un individu interpellé",
+    "texte": "Dans la nuit du 3 mars 2025, un homme a été agressé à coups de poing à proximité de la gare fictive de Clairville. Selon le parquet pédagogique, l'auteur présumé, prénommé Marc, nommé Lefevre, âgé de 34 ans, de nationalité française, a été interpellé. Le pays d'origine n'est pas précisé. Cette notice est un exercice scolaire : tous les faits et identités sont inventés.",
+    "date_publication": "2025-03-04T08:12:00+01:00"
+  },
+  {
+    "source": "demo",
+    "url": "https://example.invalid/pedago/budget-municipal",
+    "titre": "Le conseil municipal vote le budget 2026",
+    "texte": "Les élus ont adopté à une voix près le budget primitif. Les débats ont porté sur les cantines scolaires et la rénovation d'une médiathèque. Aucun fait de violence n'est mentionné. Texte entièrement fictif à but pédagogique.",
+    "date_publication": "2026-01-15T18:00:00+01:00"
+  },
+  {
+    "source": "demo",
+    "url": "https://example.invalid/pedago/vol-violence-fictif",
+    "titre": "Vol avec violence dans une bijouterie fictive",
+    "texte": "Le 12 juillet 2024, une bijouterie de Port-Lumière a subi un vol avec violence. Un individu non identifié, décrit seulement comme « un homme d'une vingtaine d'années », a menacé le commerçant. Nom, prénom, nationalité et pays d'origine inconnus. Scénario pédagogique, aucune personne réelle.",
+    "date_publication": "2024-07-13T11:40:00+02:00"
+  },
+  {
+    "source": "demo",
+    "url": "https://example.invalid/pedago/sport",
+    "titre": "L'équipe locale s'impose 3-1 en amical",
+    "texte": "Une rencontre amicale sans enjeu. L'entraîneur salue l'état d'esprit du groupe. Rien à voir avec une infraction. Texte fictif.",
+    "date_publication": "2026-05-02T21:00:00+02:00"
+  }
+]

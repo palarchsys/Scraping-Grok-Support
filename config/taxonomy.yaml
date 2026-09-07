@@ -1,0 +1,38 @@
+labels:
+  - non_agression
+  - violence_physique
+  - agression_sexuelle
+  - homicide
+  - tentative
+  - menace
+  - vol_avec_violence
+  - autre_agression
+
+# Préfiltre cheap : si aucun jeton, skip LLM.
+prefilter_tokens:
+  - agression
+  - agressé
+  - agressée
+  - agressés
+  - violenté
+  - violentée
+  - meurtre
+  - assassinat
+  - homicide
+  - coup de couteau
+  - poignardé
+  - poignardée
+  - tabassé
+  - tabassée
+  - viol
+  - violences
+  - rixe
+  - braquage
+  - vol avec violence
+  - menacé
+  - menacée
+  - coups et blessures
+  - ITT
+
+confidence_threshold: 0.7
+max_article_chars: 8000

@@ -1,0 +1,44 @@
+from sscraping.nlp.pipeline import analyze_one
+from sscraping.nlp.schema import IncidentExtraction
+
+
+class Dummy:
+    name = "dummy"
+    model = "dummy"
+
+    async def complete_json(self, system: str, user: str) -> dict:
+        return {
+            "is_aggression": True,
+            "categorie": "violence_physique",
+            "agresseur": {
+                "nom": "Lefevre",
+                "prenom": "Marc",
+                "nationalite": "française",
+                "age": 34,
+                "pays_origine": None,
+            },
+            "faits": {"annee": 2025, "mois": 3, "jour": 3},
+            "confidence": 0.91,
+            "preuves": ["agressé à coups de poing"],
+        }
+
+    async def aclose(self) -> None:
+        return None
+
+
+async def test_budget_skipped_without_llm() -> None:
+    ext, raw = await analyze_one(Dummy(), "Budget", "Les élus votent le budget", 0.7)
+    assert ext.categorie == "non_agression"
+    assert raw == "{}"
+
+
+async def test_aggression_extracted() -> None:
+    ext, _ = await analyze_one(
+        Dummy(),
+        "Agression à coups de poing",
+        "un homme a été agressé à coups de poing",
+        0.7,
+    )
+    assert isinstance(ext, IncidentExtraction)
+    assert ext.is_aggression
+    assert ext.agresseur.nom == "Lefevre"
