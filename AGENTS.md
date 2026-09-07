@@ -16,13 +16,13 @@ NLP : `nlp/connectors/openai_compat.py`. Grok = `api.x.ai` (`grok-4.5`). Local V
 ```
 install.sh                 Ubuntu 26.04 only entry
 scripts/serve-v100.sh      serveur inférence local
-config/sources.yaml        RSS + sélecteurs
+config/sources.yaml        blocs site (listing_url + XPath pagination/article)
 config/taxonomy.yaml       labels fermés
 src/sscraping/
   cli.py pipeline.py settings.py
   db/schema.sql db/store.py
   http/client.py http/robots.py
-  scrape/{base,rss,html,normalize,sources}.py
+  scrape/{base,rss,html,xpath,site,normalize,sources}.py
   nlp/schema.py nlp/filter.py nlp/pipeline.py
   nlp/connectors/{base,openai_compat,grok,v100}.py
 tests/  fixtures/
@@ -41,7 +41,7 @@ tests/  fixtures/
 `./install.sh` · `./install.sh --v100` · `.venv/bin/sscraping scrape` · `sscraping analyze --backend grok|v100` · `sscraping run` · `pytest -q`
 
 ## Quand éditer
-- Nouveau site → `config/sources.yaml` + éventuellement sous-classe scrape.
+- Nouveau site → un bloc dans `config/sources.yaml` (listing_url + XPath). Pas de scraper unique magique.
 - Prompt NLP → `nlp/pipeline.py` SYSTEM_PROMPT uniquement. Garder Pydantic synchro.
 - Nouveau connecteur → sous-classe `OpenAICompatConnector`. Ne pas dupliquer le POST.
 - Perf : `CONCURRENCY` / `NLP_CONCURRENCY` dans `.env`.

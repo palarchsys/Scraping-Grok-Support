@@ -12,8 +12,8 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 |---|---|---|
 | Runtime | Python ≥ 3.12, asyncio | I/O bound (HTTP + LLM) |
 | HTTP | httpx HTTP/2 + tenacity | pool, retry 429/5xx |
-| HTML | selectolax | CSS rapide, pas BeautifulSoup |
-| RSS | lxml | XML déterministe |
+| HTML | lxml XPath | listes paginées + intra-article |
+| RSS | lxml | flux optionnel (`kind: rss`) |
 | SQL | SQLite WAL + aiosqlite | un process, upserts/s suffisants |
 | Contrat | pydantic v2 | JSON LLM refusé si hors schéma |
 | CLI | typer | `sscraping scrape \| analyze \| run` |
@@ -23,12 +23,49 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 ## Deux étapes
 
 ```
-sources.yaml ──► RSS (+ HTML optionnel) ──► articles (SQLite)
-                                              │
-                         préfiltre tokens ────┤ miss → skip
-                                              ▼ hit
-                         Grok API  ou  V100 /v1 ──► JSON ──► incidents
+config/sources.yaml (blocs site)
+        │
+        ▼
+listing_url + pagination XPath ──► cartes ──► GET article + XPath
+        │
+        ▼
+   articles SQLite (titre, texte, url, date)
+        │
+        ▼
+   préfiltre → Grok | V100 → incidents
 ```
+
+## Inputs
+
+| Input | Rôle |
+|---|---|
+| `config/sources.yaml` | **Blocs site** : `id`, `listing_url`, XPath pagination, XPath liste, XPath article |
+| `config/taxonomy.yaml` | Labels d’agression + tokens préfiltre |
+| `.env` | Clés, plafonds, backend |
+| `fixtures/` | Hors-ligne (tests) — pas le crawl live |
+| CLI | `scrape --live`, `analyze --backend grok\|v100` |
+
+Exemple de bloc site :
+
+```yaml
+- id: francetvinfo_faits_divers
+  kind: html
+  listing_url: https://www.francetvinfo.fr/faits-divers/
+  pagination:
+    next: "//a[@rel='next']/@href"
+    max_pages: 5
+  listing:
+    item: "//article"
+    url: ".//a/@href"
+    title: ".//h2"
+    date: ".//time/@datetime"
+  article:
+    title: "//h1"
+    body: "//div[contains(@class,'c-body')]"
+    date: "//time/@datetime"
+```
+
+Pagination alternative : `pagination.page_url: "https://site/liste?page={page}"`.
 
 ### Étape 1 — scrape
 

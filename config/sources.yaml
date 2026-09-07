@@ -1,36 +1,62 @@
-# Sources pédagogiques. RSS d'abord (stable, moins invasif que le crawl HTML).
-# enabled: false par défaut pour le live ; DEMO ignore ceci et lit fixtures/.
+# INPUTS du projet — un bloc = un site.
+# Champs : id, listing_url, pagination XPath, listing XPath, article XPath.
+# kind: html (défaut, crawl site) | rss
+# enabled: false = ignoré en --live. DEMO (sscraping scrape) ignore ce fichier.
 defaults:
   timezone: Europe/Paris
-  delay_s: 0.4
+  delay_s: 0.5
+  max_pages: 5
 
-sources:
-  - id: francetvinfo
+sites:
+  # --- HTML + XPath : liste paginée → chaque article ---
+  - id: francetvinfo_faits_divers
     enabled: true
-    kind: rss
-    listing: https://www.francetvinfo.fr/titres.rss
-    article_selectors:
-      title: "h1"
-      body: "div.c-body, article"
-      date: "time"
+    kind: html
+    listing_url: https://www.francetvinfo.fr/faits-divers/
     timezone: Europe/Paris
+    delay_s: 0.5
+    pagination:
+      next: "//a[@rel='next']/@href"
+      max_pages: 5
+    listing:
+      item: "//article | //div[contains(@class,'card')]"
+      url: ".//a[contains(@href,'/faits-divers/')]/@href"
+      title: ".//h2 | .//h3"
+      date: ".//time/@datetime"
+    article:
+      title: "//h1"
+      body: "//div[contains(@class,'c-body')] | //article"
+      date: "//time/@datetime"
 
-  - id: lemonde_une
-    enabled: true
-    kind: rss
-    listing: https://www.lemonde.fr/rss/une.xml
-    article_selectors:
-      title: "h1"
-      body: "article, .article__content"
-      date: "time"
-    timezone: Europe/Paris
+  - id: lemonde_pixels
+    enabled: false
+    kind: html
+    listing_url: https://www.lemonde.fr/pixels/
+    pagination:
+      next: "//a[contains(@class,'pagination') and contains(.,'Suivant')]/@href | //link[@rel='next']/@href"
+      max_pages: 3
+    listing:
+      item: "//section[contains(@class,'teaser')] | //article"
+      url: ".//a/@href"
+      title: ".//h3 | .//h2"
+      date: ".//time/@datetime"
+    article:
+      title: "//h1"
+      body: "//article | //div[contains(@class,'article__content')]"
+      date: "//time/@datetime"
 
-  - id: franceinfo_faits_divers
-    enabled: true
+  # Pagination par gabarit d'URL (si pas de rel=next)
+  # pagination:
+  #   page_url: "https://exemple.invalid/liste?page={page}"
+  #   page_start: 1
+  #   max_pages: 8
+
+  # --- RSS toujours possible ---
+  - id: francetvinfo_rss
+    enabled: false
     kind: rss
-    listing: https://www.francetvinfo.fr/faits-divers.rss
-    article_selectors:
-      title: "h1"
-      body: "div.c-body, article"
-      date: "time"
-    timezone: Europe/Paris
+    listing_url: https://www.francetvinfo.fr/faits-divers.rss
+    article:
+      title: "//h1"
+      body: "//div[contains(@class,'c-body')] | //article"
+      date: "//time/@datetime"

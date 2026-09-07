@@ -1,24 +1,32 @@
 # Étape 1 scrape — contrat court
 
-Entrée : `config/sources.yaml`. Sortie : table `articles`.
+Entrée principale : `config/sources.yaml` (alias `sites:`). Sortie : table `articles`.
 
-## Flux
-`sources.load → robots.allow → GET listing RSS → parse items → (optionnel) GET article HTML → normalize → store.upsert_article`
+## Inputs
+Chaque bloc site :
+- `id` — nom interne
+- `listing_url` — URL de la **liste** d’articles
+- `kind` — `html` (défaut, XPath) ou `rss`
+- `pagination.next` — XPath du lien page suivante (`@href`)
+- `pagination.page_url` — gabarit optionnel `.../{page}`
+- `pagination.max_pages` — plafond
+- `listing.item|url|title|date` — XPath de la liste (url obligatoire)
+- `article.title|body|date` — XPath intra-article
+- `delay_s`, `timezone`, `enabled`
 
-## Champs obligatoires
-titre, texte, url (UNIQUE), date_publication (UTC aware). texte peut être le résumé RSS si corps HTML vide.
+Pas de nouveau site = pas de nouveau Python. Un YAML suffit.
+
+## Flux html
+`load sites → robots → GET listing → XPath cartes → next page (max_pages) → GET article → XPath titre/corps/date → upsert`
+
+## Flux rss
+`GET flux → parse items → (optionnel) GET article + XPath`
+
+## Champs SQL
+titre, texte, url UNIQUE, date_publication UTC.
 
 ## Perf
-- Un `HttpClient` partagé, HTTP/2, pool, timeout, retry 429/5xx expo (tenacity).
-- Semaphore `settings.concurrency` (défaut 8).
-- selectolax, pas BeautifulSoup.
-- RSS lxml. Pas de Playwright sauf source `js: true`.
-
-## Dates
-dateparser/dateutil + timezone source (souvent Europe/Paris). Relatif (« hier ») → ancré `now`.
-
-## Erreurs
-Log + `statut=erreur`. Ne jamais planter le batch. robots.txt deny → skip source.
+HttpClient partagé, HTTP/2, retry, semaphore. Sources en parallèle, pages/articles en série (`delay_s`). lxml XPath. Pas de Playwright sauf `js: true` (non implémenté v1).
 
 ## Tests
-Fixtures HTML/RSS dans `fixtures/`. Zéro réseau en pytest.
+`fixtures/html/` + `fixtures/sample.rss.xml`. Zéro réseau en pytest.
