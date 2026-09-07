@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Programme d'installation Ubuntu 26.04 pour ss-craping-bot.
+# Programme d'installation Ubuntu 26.04 pour Scraping Grok Support.
 # Usage : ./install.sh
 set -euo pipefail
 
@@ -16,7 +16,7 @@ for arg in "$@"; do
   esac
 done
 
-log() { printf '\033[1m[ss-craping-bot]\033[0m %s\n' "$*"; }
+log() { printf '\033[1m[Scraping Grok Support]\033[0m %s\n' "$*"; }
 die() { printf 'erreur: %s\n' "$*" >&2; exit 1; }
 
 if [[ -f /etc/os-release ]]; then
@@ -71,20 +71,20 @@ set +e
 PG_OK=$?
 set -e
 if [[ "$PG_OK" -ne 0 ]]; then
-  log "init-db a échoué — lance plus tard : ./scripts/init-db.sh && sscraping db-init"
+  log "init-db a échoué — lance plus tard : ./scripts/init-db.sh && scraping-grok db-init"
 else
   set +e
-  sscraping db-init
+  scraping-grok db-init
   set -e
 fi
 
 log "OK"
 echo
 echo "  source .venv/bin/activate"
-echo "  sscraping db-init"
-echo "  sscraping scrape"
-echo "  sscraping scrape --live"
-echo "  sscraping analyze"
-echo "  sscraping triage"
-echo "  sscraping stats"
-echo "  tail -f logs/sscraping.log logs/sql.log logs/nlp.log"
+echo "  scraping-grok db-init"
+echo "  scraping-grok scrape"
+echo "  scraping-grok scrape --live"
+echo "  scraping-grok analyze"
+echo "  scraping-grok triage"
+echo "  scraping-grok stats"
+echo "  tail -f logs/scraping-grok.log logs/sql.log logs/nlp.log"

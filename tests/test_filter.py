@@ -1,4 +1,4 @@
-from sscraping.nlp.filter import might_be_crime, _token_sets
+from scraping_grok.nlp.filter import might_be_crime, _token_sets
 
 
 def test_prefilter_compiles() -> None:

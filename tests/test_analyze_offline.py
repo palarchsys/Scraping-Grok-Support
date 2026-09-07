@@ -1,5 +1,5 @@
-from sscraping.nlp.pipeline import analyze_one
-from sscraping.nlp.schema import IncidentExtraction
+from scraping_grok.nlp.pipeline import analyze_one
+from scraping_grok.nlp.schema import IncidentExtraction
 
 
 class Dummy:

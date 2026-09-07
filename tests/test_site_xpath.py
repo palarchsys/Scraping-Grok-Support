@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from sscraping.crawler.extract import next_page_url, parse_article, parse_listing
-from sscraping.scrape.base import ScrapedArticle
-from sscraping.scrape.sources import ArticleXPath, ListingXPath, Pagination, Source, load_sources
+from scraping_grok.crawler.extract import next_page_url, parse_article, parse_listing
+from scraping_grok.scrape.base import ScrapedArticle
+from scraping_grok.scrape.sources import ArticleXPath, ListingXPath, Pagination, Source, load_sources
 
 FIX = Path(__file__).resolve().parents[1] / "fixtures" / "html"
 

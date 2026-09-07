@@ -3,10 +3,10 @@
 ```
 ./install.sh
 ./scripts/init-db.sh
-sscraping db-init
+scraping-grok db-init
 ```
 
-Python ≥3.12. `DATABASE_URL=postgresql://sscraping:sscraping@127.0.0.1:5432/sscraping`
-Alt : `docker compose up -d db`. Pas de profil GPU.
+Python ≥3.12. `DATABASE_URL=postgresql://scraping_grok:scraping_grok@127.0.0.1:5432/scraping_grok`
+Alt : `docker compose up -d db`.
 
 Ne pas committer `.env`, `data/`, `logs/`.

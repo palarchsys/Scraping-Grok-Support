@@ -7,25 +7,25 @@ db:
 	./scripts/init-db.sh
 
 db-init:
-	.venv/bin/sscraping db-init
+	.venv/bin/scraping-grok db-init
 
 test:
 	.venv/bin/pytest -q
 
 scrape:
-	.venv/bin/sscraping scrape
+	.venv/bin/scraping-grok scrape
 
 scrape-live:
-	.venv/bin/sscraping scrape --live
+	.venv/bin/scraping-grok scrape --live
 
 analyze:
-	.venv/bin/sscraping analyze
+	.venv/bin/scraping-grok analyze
 
 run:
-	.venv/bin/sscraping run
+	.venv/bin/scraping-grok run
 
 triage:
-	.venv/bin/sscraping triage
+	.venv/bin/scraping-grok triage
 
 stats:
-	.venv/bin/sscraping stats
+	.venv/bin/scraping-grok stats

@@ -1,4 +1,4 @@
-# ss-craping-bot
+# Scraping Grok Support
 
 Bot pédagogique en deux étapes : **collecte** d’articles de presse, puis **analyse** du sujet. Si ce n’est pas un crime, on passe. Sinon on assigne **un des 8 groupes** et on extrait nom, prénom, nationalité, âge, pays d’origine, année / mois / jour des faits — vide si absent du texte.
 
@@ -17,7 +17,7 @@ Dépôt public = code + installateur Ubuntu 26.04. `fixtures/` = corpus hors-lig
 | NLP | asyncio + httpx | Grok API (`grok-4.5`) |
 | Logs | `logs/*.log` rotatifs | scrape / sql / nlp / scrapy |
 | Contrat | pydantic v2 | JSON LLM refusé si hors schéma |
-| CLI | typer | `sscraping scrape \| analyze \| run` |
+| CLI | typer | `scraping-grok scrape \| analyze \| run` |
 
 Étape 2 : Grok uniquement. Prompt compressé (lead + phrases clés), `max_tokens=280`.
 
@@ -72,7 +72,7 @@ Pagination alternative : `pagination.page_url: "https://site/liste?page={page}"`
 
 Champs : `titre`, `texte`, `url` (unique), `date_publication`.
 
-Défaut : fixtures locales, **zéro réseau**. Live : `sscraping scrape --live` (robots.txt, délais, plafond).
+Défaut : fixtures locales, **zéro réseau**. Live : `scraping-grok scrape --live` (robots.txt, délais, plafond).
 
 ### Étape 2 — analyse
 
@@ -96,8 +96,8 @@ Identités en clair. `confidence` conservé.
 ## Install Ubuntu 26.04
 
 ```bash
-git clone https://github.com/palarchsys/ss-craping-bot.git
-cd ss-craping-bot
+git clone https://github.com/palarchsys/Scraping-Grok-Support.git
+cd Scraping-Grok-Support
 chmod +x install.sh
 ./install.sh
 ```
@@ -106,16 +106,16 @@ chmod +x install.sh
 
 ```bash
 source .venv/bin/activate
-sscraping db-init
-sscraping scrape
-sscraping scrape --live
-sscraping analyze
-sscraping triage
-sscraping stats
+scraping-grok db-init
+scraping-grok scrape
+scraping-grok scrape --live
+scraping-grok analyze
+scraping-grok triage
+scraping-grok stats
 pytest -q
 ```
 
-Live HTTP (opt-in) : `sscraping scrape --live` (skip URL déjà en base).
+Live HTTP (opt-in) : `scraping-grok scrape --live` (skip URL déjà en base).
 
 Autre OS (dev) : `ALLOW_OTHER_OS=1 ./install.sh`.
 
@@ -125,8 +125,6 @@ Autre OS (dev) : `ALLOW_OTHER_OS=1 ./install.sh`.
 - [`AGENTS.scrape.md`](AGENTS.scrape.md) — étape 1
 - [`AGENTS.nlp.md`](AGENTS.nlp.md) — étape 2 Grok
 - [`AGENTS.install.md`](AGENTS.install.md) — Ubuntu 26.04
-
-- [`AGENTS.install.md`](AGENTS.install.md) — Ubuntu 26.04 / GPU
 
 ## Licence
 

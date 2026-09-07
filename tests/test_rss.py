@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sscraping.scrape.rss import parse_feed
+from scraping_grok.scrape.rss import parse_feed
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "sample.rss.xml"
 

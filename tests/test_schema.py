@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from sscraping.nlp.schema import IncidentExtraction
+from scraping_grok.nlp.schema import IncidentExtraction
 
 
 def test_empty_strings_become_none() -> None:

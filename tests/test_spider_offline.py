@@ -3,9 +3,9 @@ from pathlib import Path
 import scrapy
 from scrapy.http import HtmlResponse
 
-from sscraping.crawler.spiders.site import SiteSpider
-from sscraping.scrape.sources import ArticleXPath, ListingXPath, Pagination, Source
-from sscraping.settings import Settings
+from scraping_grok.crawler.spiders.site import SiteSpider
+from scraping_grok.scrape.sources import ArticleXPath, ListingXPath, Pagination, Source
+from scraping_grok.settings import Settings
 
 FIX = Path(__file__).resolve().parents[1] / "fixtures" / "html"
 

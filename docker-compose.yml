@@ -2,18 +2,18 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: sscraping
-      POSTGRES_PASSWORD: sscraping
-      POSTGRES_DB: sscraping
+      POSTGRES_USER: scraping_grok
+      POSTGRES_PASSWORD: scraping_grok
+      POSTGRES_DB: scraping_grok
     ports:
       - "5432:5432"
     volumes:
-      - sscraping_pg:/var/lib/postgresql/data
+      - scraping_grok_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sscraping -d sscraping"]
+      test: ["CMD-SHELL", "pg_isready -U scraping_grok -d scraping_grok"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  sscraping_pg:
+  scraping_grok_pg:

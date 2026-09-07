@@ -1,4 +1,4 @@
-from sscraping.scrape.html import extract_article
+from scraping_grok.scrape.html import extract_article
 
 
 def test_extract_article_selectors() -> None:

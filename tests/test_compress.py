@@ -1,5 +1,5 @@
-from sscraping.nlp.compress import compress_for_llm
-from sscraping.nlp.preuves import local_preuves
+from scraping_grok.nlp.compress import compress_for_llm
+from scraping_grok.nlp.preuves import local_preuves
 
 
 def test_compress_keeps_lead_and_identity() -> None:

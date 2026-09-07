@@ -2,10 +2,10 @@ import os
 
 import pytest
 
-from sscraping.db.store import Store
-from sscraping.scrape.base import ScrapedArticle
+from scraping_grok.db.store import Store
+from scraping_grok.scrape.base import ScrapedArticle
 
-DSN = os.environ.get("DATABASE_URL", "postgresql://sscraping:sscraping@127.0.0.1:5432/sscraping")
+DSN = os.environ.get("DATABASE_URL", "postgresql://scraping_grok:scraping_grok@127.0.0.1:5432/scraping_grok")
 
 
 async def _connect() -> Store | None:

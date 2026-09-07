@@ -1,5 +1,5 @@
-from sscraping.nlp.group import grouping_key, norm_name
-from sscraping.nlp.schema import Auteur, Faits, IncidentExtraction
+from scraping_grok.nlp.group import grouping_key, norm_name
+from scraping_grok.nlp.schema import Auteur, Faits, IncidentExtraction
 
 
 def _ext(nom, prenom, annee=2025, mois=3, jour=3) -> IncidentExtraction:

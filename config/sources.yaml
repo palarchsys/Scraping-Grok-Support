@@ -1,7 +1,7 @@
 # INPUTS du projet — un bloc = un site.
 # Champs : id, listing_url, pagination XPath, listing XPath, article XPath.
 # kind: html (défaut, crawl site) | rss
-# enabled: false = ignoré en --live. DEMO (sscraping scrape) ignore ce fichier.
+# enabled: false = ignoré en --live. DEMO (scraping_grok scrape) ignore ce fichier.
 defaults:
   timezone: Europe/Paris
   delay_s: 0.5

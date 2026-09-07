@@ -1,4 +1,4 @@
-from sscraping.nlp.connectors.openai_compat import _strip_fence
+from scraping_grok.nlp.connectors.openai_compat import _strip_fence
 
 
 def test_strip_fence() -> None:

@@ -1,4 +1,4 @@
-# ss-craping-bot — contrat agent (lire en entier, ne pas élargir)
+# Scraping Grok Support — contrat agent (lire en entier, ne pas élargir)
 
 Pédagogique, démo locale. Rien n’est publié depuis git.
 PostgreSQL stocke les identités **en clair**. NULL si absent du texte. Pas de masquage SQL.
@@ -10,15 +10,14 @@ PostgreSQL stocke les identités **en clair**. NULL si absent du texte. Pas de m
 
 ## Stack
 Python ≥3.12 · Scrapy · PostgreSQL/psycopg3 · Grok `api.x.ai` (`grok-4.5`) · pydantic v2 · typer
-Pas de V100 / pas de LLM local.
 
-Logs DEBUG : `logs/{sscraping,scrapy,sql,nlp}.log`. `--quiet` = INFO.
+Logs DEBUG : `logs/{scraping_grok,scrapy,sql,nlp}.log`. `--quiet` = INFO.
 
 ## Layout
 ```
 install.sh  docker-compose.yml  scripts/init-db.sh
 config/sources.yaml  config/taxonomy.yaml
-src/sscraping/
+src/scraping_grok/
   cli.py pipeline.py settings.py logconfig.py
   db/{schema.sql,sql.py,store.py}
   crawler/{..., known.py, spiders/site.py, spiders/rss.py}
@@ -33,6 +32,6 @@ src/sscraping/
 - Ne jamais inventer un champ. Ne jamais anonymiser en SQL.
 
 ## Commandes
-`./install.sh` · `sscraping db-init` · `sscraping scrape --live` · `sscraping analyze` · `sscraping triage` · `pytest -q`
+`./install.sh` · `scraping-grok db-init` · `scraping-grok scrape --live` · `scraping-grok analyze` · `scraping-grok triage` · `pytest -q`
 
 Prompt NLP → `nlp/pipeline.py` SYSTEM_PROMPT uniquement (rester identique d’un appel à l’autre).
