@@ -35,3 +35,16 @@ def test_spider_listing_yields_article_and_next() -> None:
     assert any(u.endswith("/a.html") for u in urls)
     assert any(u.endswith("/b.html") for u in urls)
     assert any(u.endswith("/list-2.html") for u in urls)
+
+
+def test_spider_stops_when_all_known() -> None:
+    known = {"https://example.invalid/a.html", "https://example.invalid/b.html"}
+    spider = SiteSpider(source=_src(), app_settings=Settings(max_articles=50), known_urls=known)
+    url = "https://example.invalid/list-1.html"
+    body = (FIX / "list-1.html").read_bytes()
+    request = scrapy.Request(url, meta={"page": 1})
+    resp = HtmlResponse(url=url, body=body, encoding="utf-8", request=request)
+    reqs = list(spider.parse_listing(resp))
+    assert reqs == []
+    assert spider.skipped_known == 2
+

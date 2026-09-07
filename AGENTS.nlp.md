@@ -1,14 +1,11 @@
 # Étape 2 NLP — Grok only
 
-Entrée : articles non analysés. Sortie : `incidents` + `faits` + `analyzed_at`.
+Entrée : `analyze_status=pending` uniquement. `ignored` / `extracted` / `error` = déjà traité, jamais renvoyé.
 
-## Tokens
-préfiltre (1 fort ou 2 faibles) → `compress_for_llm` lead+phrases clés ≤1800c → SYSTEM_PROMPT statique → max_tokens 280 → `local_preuves` (pas le LLM).
+préfiltre → compressé ≤1800c → JSON (1 retry) → preuves locales → `incidents` + `faits`.
 
-## 8 groupes
-atteintes_vie | violences_personnes | atteintes_sexuelles | atteintes_biens | stupefiants | criminalite_economique | circulation_securite | ordre_public_surete
+`auteurs[]` = mis en cause (interpellé / mis en examen), pas la victime. `lieu` = ville.
 
-## Groupage
-`grouping_key` = norm(nom)+norm(prénom)+année+mois+jour. Incomplet → pas de `fait_id`.
+Groupage : nom+prénom+date±1j+lieu, sinon similarité de titre.
 
-Connecteur : `GrokConnector` uniquement (`XAI_API_KEY`, `grok-4.5`).
+Tokens : logs `prompt_tokens` / `completion_tokens` / `calls`.

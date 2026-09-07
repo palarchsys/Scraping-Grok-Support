@@ -1,7 +1,5 @@
 # Étape 1 scrape — Scrapy + PostgreSQL
 
-Live : spider générique. Skip GET si URL déjà en `articles`. HTTPCACHE 1h. DOWNLOAD_MAXSIZE 2 Mo.
+Live : skip GET si URL déjà en `articles` (y compris ignored). Stop pagination si page sans URL neuve ou XPath vide.
 
-Demo : fixtures → Store.
-
-XPath : `config/sources.yaml`. Logs REQ/RES + XPath vides.
+Probe : `scraping-grok probe --source ID [--save]`. Si `playwright_suggere`, le HTML est un mur cookies/JS — ne pas ajouter Playwright par défaut.

@@ -78,7 +78,9 @@ class Faits(BaseModel):
 class IncidentExtraction(BaseModel):
     is_crime: bool
     type_crime: TypeCrime | None = None
+    auteurs: list[Auteur] = Field(default_factory=list)
     auteur: Auteur = Field(default_factory=Auteur)
+    lieu: str | None = None
     faits: Faits = Field(default_factory=Faits)
     confidence: float = Field(ge=0.0, le=1.0)
     preuves: list[str] = Field(default_factory=list)
@@ -88,10 +90,23 @@ class IncidentExtraction(BaseModel):
     def clip_quotes(cls, v: list[str]) -> list[str]:
         return [s.strip()[:240] for s in v[:5] if s and s.strip()]
 
+    @field_validator("lieu", mode="before")
+    @classmethod
+    def lieu_empty(cls, v: object) -> object:
+        if v is None:
+            return None
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     @model_validator(mode="after")
-    def type_si_crime(self) -> IncidentExtraction:
+    def type_et_auteurs(self) -> IncidentExtraction:
         if self.is_crime and self.type_crime is None:
             raise ValueError("type_crime obligatoire parmi les 8 groupes si is_crime=true")
         if not self.is_crime:
             self.type_crime = None
+        if not self.auteurs and (self.auteur.nom or self.auteur.prenom or self.auteur.age):
+            self.auteurs = [self.auteur]
+        if self.auteurs and not (self.auteur.nom or self.auteur.prenom or self.auteur.age):
+            self.auteur = self.auteurs[0]
         return self

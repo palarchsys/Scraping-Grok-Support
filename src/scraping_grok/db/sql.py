@@ -19,7 +19,10 @@ RETURNING id
 PENDING = """
 SELECT id, source, url, titre, texte, date_publication
 FROM articles
-WHERE statut = 'ok' AND analyzed_at IS NULL AND length(texte) > 40
+WHERE statut = 'ok'
+  AND analyze_status = 'pending'
+  AND analyzed_at IS NULL
+  AND length(texte) > 40
 ORDER BY id DESC
 LIMIT %s
 """
@@ -27,14 +30,16 @@ LIMIT %s
 KNOWN_URLS = "SELECT url FROM articles"
 
 MARK_ANALYZED = """
-UPDATE articles SET analyzed_at = now(), analyze_backend = %s WHERE id = %s
+UPDATE articles
+SET analyzed_at = now(), analyze_backend = %s, analyze_status = %s
+WHERE id = %s AND analyze_status = 'pending'
 """
 
 UPSERT_INCIDENT = """
 INSERT INTO incidents (
-  article_id, is_crime, type_crime, nom, prenom, nationalite, age, pays_origine,
+  article_id, is_crime, type_crime, nom, prenom, nationalite, age, pays_origine, lieu, auteurs,
   annee, mois, jour, confidence, preuves, modele_version, raw_model_output
-) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (article_id) DO UPDATE SET
   is_crime = EXCLUDED.is_crime,
   type_crime = EXCLUDED.type_crime,
@@ -43,6 +48,8 @@ ON CONFLICT (article_id) DO UPDATE SET
   nationalite = EXCLUDED.nationalite,
   age = EXCLUDED.age,
   pays_origine = EXCLUDED.pays_origine,
+  lieu = EXCLUDED.lieu,
+  auteurs = EXCLUDED.auteurs,
   annee = EXCLUDED.annee,
   mois = EXCLUDED.mois,
   jour = EXCLUDED.jour,
@@ -54,18 +61,24 @@ ON CONFLICT (article_id) DO UPDATE SET
 RETURNING id
 """
 
-UPSERT_FAIT = """
-INSERT INTO faits (nom_norm, prenom_norm, annee, mois, jour, type_crime, article_id_principal)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
-ON CONFLICT (nom_norm, prenom_norm, annee, mois, jour) DO UPDATE SET
-  type_crime = COALESCE(faits.type_crime, EXCLUDED.type_crime)
+INSERT_FAIT = """
+INSERT INTO faits (nom_norm, prenom_norm, lieu_norm, titre_norm, annee, mois, jour, type_crime, article_id_principal)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 RETURNING id
+"""
+
+FIND_FAITS_DATE = """
+SELECT id, nom_norm, prenom_norm, lieu_norm, titre_norm, annee, mois, jour
+FROM faits
+WHERE annee IS NOT NULL AND mois IS NOT NULL AND jour IS NOT NULL
+  AND make_date(annee, mois, jour) BETWEEN %s AND %s
 """
 
 ATTACH_FAIT = "UPDATE incidents SET fait_id = %s WHERE id = %s"
 
 UNGROUPED = """
-SELECT id, article_id, nom, prenom, annee, mois, jour, type_crime
-FROM incidents
-WHERE is_crime = true
+SELECT i.id, i.article_id, i.nom, i.prenom, i.lieu, i.auteurs, i.annee, i.mois, i.jour, i.type_crime, a.titre
+FROM incidents i
+JOIN articles a ON a.id = i.article_id
+WHERE i.is_crime = true
 """

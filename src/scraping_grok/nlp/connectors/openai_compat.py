@@ -40,6 +40,9 @@ class OpenAICompatConnector:
         self._base_url = base_url.rstrip("/")
         safe_headers = {k: ("***" if k.lower() == "authorization" else v) for k, v in headers.items()}
         log.info("connector init name=%s model=%s base=%s headers=%s timeout=%s", name, model, self._base_url, safe_headers, timeout)
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.calls = 0
         self._client = httpx.AsyncClient(
             base_url=self._base_url,
             timeout=timeout,
@@ -63,7 +66,7 @@ class OpenAICompatConnector:
                 json={
                     "model": self.model,
                     "temperature": 0,
-                    "max_tokens": 280,
+                    "max_tokens": 400,
                     "response_format": {"type": "json_object"},
                     "messages": [
                         {"role": "system", "content": system},
@@ -81,7 +84,17 @@ class OpenAICompatConnector:
         resp.raise_for_status()
         payload = resp.json()
         usage = payload.get("usage") or {}
-        log.debug("LLM usage=%s", usage)
+        self.calls += 1
+        self.prompt_tokens += int(usage.get("prompt_tokens") or 0)
+        self.completion_tokens += int(usage.get("completion_tokens") or 0)
+        log.info(
+            "LLM usage prompt=%s completion=%s total_prompt=%s total_completion=%s calls=%s",
+            usage.get("prompt_tokens"),
+            usage.get("completion_tokens"),
+            self.prompt_tokens,
+            self.completion_tokens,
+            self.calls,
+        )
         content = (payload.get("choices") or [{}])[0].get("message", {}).get("content") or "{}"
         log.debug("LLM content_head=%r", content[:400])
         return orjson.loads(_strip_fence(content))
@@ -89,3 +102,11 @@ class OpenAICompatConnector:
     async def aclose(self) -> None:
         log.debug("connector close name=%s", self.name)
         await self._client.aclose()
+
+    @property
+    def usage(self) -> dict[str, int]:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "calls": self.calls,
+        }

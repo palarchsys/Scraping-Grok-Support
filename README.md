@@ -108,14 +108,15 @@ chmod +x install.sh
 source .venv/bin/activate
 scraping-grok db-init
 scraping-grok scrape
-scraping-grok scrape --live
+sscraping-grok scrape --live
 scraping-grok analyze
+scraping-grok probe --source francetvinfo_faits_divers
 scraping-grok triage
 scraping-grok stats
 pytest -q
 ```
 
-Live HTTP (opt-in) : `scraping-grok scrape --live` (skip URL déjà en base).
+Live HTTP (opt-in) : `scraping-grok scrape --live` (skip URL déjà en base, y compris ignored).
 
 Autre OS (dev) : `ALLOW_OTHER_OS=1 ./install.sh`.
 

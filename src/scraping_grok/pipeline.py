@@ -54,7 +54,7 @@ async def run_analyze_only(settings: Settings) -> dict[str, int]:
     try:
         analyzed = await run_analyze(store, connector, settings)
         counts = await store.counts()
-        counts.update({"analyzed": analyzed})
+        counts.update({"analyzed": analyzed, **getattr(connector, "usage", {})})
         return counts
     finally:
         await connector.aclose()
@@ -70,9 +70,10 @@ async def run_demo_then_analyze(settings: Settings) -> dict[str, int]:
         try:
             analyzed = await run_analyze(store, connector, settings)
         finally:
+            usage = getattr(connector, "usage", {})
             await connector.aclose()
         counts = await store.counts()
-        counts.update({"scraped": scraped, "analyzed": analyzed})
+        counts.update({"scraped": scraped, "analyzed": analyzed, **usage})
         return counts
     finally:
         await store.close()

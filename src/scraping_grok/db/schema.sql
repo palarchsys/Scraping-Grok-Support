@@ -1,4 +1,5 @@
--- PostgreSQL. Identités en clair. Un fait = nom+prénom+date (triage anti-doublon).
+-- PostgreSQL. Identités en clair. analyze_status: pending|ignored|extracted|error
+-- ignored / extracted / error = déjà traité, jamais renvoyé au LLM.
 
 CREATE TABLE IF NOT EXISTS articles (
   id BIGSERIAL PRIMARY KEY,
@@ -11,24 +12,29 @@ CREATE TABLE IF NOT EXISTS articles (
   statut TEXT NOT NULL DEFAULT 'ok',
   error TEXT,
   analyzed_at TIMESTAMPTZ,
-  analyze_backend TEXT
+  analyze_backend TEXT,
+  analyze_status TEXT NOT NULL DEFAULT 'pending'
 );
 
 CREATE INDEX IF NOT EXISTS idx_articles_analyzed ON articles (analyzed_at);
 CREATE INDEX IF NOT EXISTS idx_articles_source ON articles (source);
+CREATE INDEX IF NOT EXISTS idx_articles_status ON articles (analyze_status);
 
 CREATE TABLE IF NOT EXISTS faits (
   id BIGSERIAL PRIMARY KEY,
-  nom_norm TEXT NOT NULL,
-  prenom_norm TEXT NOT NULL,
-  annee INTEGER NOT NULL,
-  mois INTEGER NOT NULL,
-  jour INTEGER NOT NULL,
+  nom_norm TEXT NOT NULL DEFAULT '',
+  prenom_norm TEXT NOT NULL DEFAULT '',
+  lieu_norm TEXT NOT NULL DEFAULT '',
+  titre_norm TEXT NOT NULL DEFAULT '',
+  annee INTEGER,
+  mois INTEGER,
+  jour INTEGER,
   type_crime TEXT,
   article_id_principal BIGINT REFERENCES articles(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (nom_norm, prenom_norm, annee, mois, jour)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_faits_personne ON faits (nom_norm, prenom_norm, annee, mois, jour);
 
 CREATE TABLE IF NOT EXISTS incidents (
   id BIGSERIAL PRIMARY KEY,
@@ -41,6 +47,8 @@ CREATE TABLE IF NOT EXISTS incidents (
   nationalite TEXT,
   age INTEGER,
   pays_origine TEXT,
+  lieu TEXT,
+  auteurs TEXT NOT NULL DEFAULT '[]',
   annee INTEGER,
   mois INTEGER,
   jour INTEGER,

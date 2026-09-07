@@ -1,4 +1,4 @@
-.PHONY: install test scrape analyze run stats triage db db-init scrape-live
+.PHONY: install test scrape analyze run stats triage db db-init scrape-live probe
 
 install:
 	./install.sh
@@ -29,3 +29,7 @@ triage:
 
 stats:
 	.venv/bin/scraping-grok stats
+
+probe:
+	.venv/bin/scraping-grok probe --source francetvinfo_faits_divers
+

@@ -27,11 +27,12 @@ src/scraping_grok/
 
 ## Règles
 - URL unique. Skip GET si URL déjà en PG.
-- LLM : préfiltre fort/faible → `compress_for_llm` (≤1800c) → prompt statique (cache préfixe) → `max_tokens=280` → preuves locales.
+- LLM : préfiltre → compressé → 1 retry JSON → preuves locales. Articles `ignored`/`extracted`/`error` jamais renvoyés au LLM.
+- Probe : `scraping-grok probe --source ID` (XPath, mur cookies). Playwright seulement si probe le dit.
 - Un article → 0..1 incident. Groupage seulement si nom, prénom, année, mois, jour tous présents.
 - Ne jamais inventer un champ. Ne jamais anonymiser en SQL.
 
 ## Commandes
-`./install.sh` · `scraping-grok db-init` · `scraping-grok scrape --live` · `scraping-grok analyze` · `scraping-grok triage` · `pytest -q`
+`./install.sh` · `scraping-grok db-init` · `scraping-grok scrape --live` · `scraping-grok analyze` · `scraping-grok probe --source ID` · `scraping-grok triage` · `pytest -q`
 
 Prompt NLP → `nlp/pipeline.py` SYSTEM_PROMPT uniquement (rester identique d’un appel à l’autre).

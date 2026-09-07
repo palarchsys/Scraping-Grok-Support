@@ -27,6 +27,7 @@ class SiteSpider(scrapy.Spider):
         self.download_delay = source.delay_s
         self.known_urls: set[str] = set(known_urls or [])
         self.skipped_known = 0
+        self.xpath_empty = 0
 
     def start_requests(self):
         src = self.source
@@ -63,6 +64,11 @@ class SiteSpider(scrapy.Spider):
             response.encoding,
         )
         teasers = parse_listing(response.text, response.url, self.source)
+        if not teasers:
+            self.xpath_empty += 1
+            log.warning("XPATH listing vide spider=%s page=%d — stop pagination", self.name, page)
+            return
+        new_on_page = 0
         for art in teasers:
             if art.url in self.known_urls:
                 self.skipped_known += 1
@@ -75,6 +81,7 @@ class SiteSpider(scrapy.Spider):
                 break
             self.seen_article_urls.add(art.url)
             self.scheduled += 1
+            new_on_page += 1
             log.debug("SCHEDULE article #%d %s", self.scheduled, art.url)
             yield scrapy.Request(
                 art.url,
@@ -85,6 +92,9 @@ class SiteSpider(scrapy.Spider):
             )
 
         if self.scheduled >= self.app_settings.max_articles:
+            return
+        if new_on_page == 0:
+            log.info("page=%d uniquement des URLs déjà traitées — stop pagination", page)
             return
         if page >= self.source.pagination.max_pages:
             log.info("plafond max_pages=%s", self.source.pagination.max_pages)
@@ -134,12 +144,13 @@ class SiteSpider(scrapy.Spider):
 
     def closed(self, reason: str) -> None:
         log.info(
-            "CLOSED spider=%s reason=%s pages=%d scheduled=%d skipped_known=%d",
+            "CLOSED spider=%s reason=%s pages=%d scheduled=%d skipped_known=%d xpath_empty=%d",
             self.name,
             reason,
             self.pages,
             self.scheduled,
             self.skipped_known,
+            self.xpath_empty,
         )
         if self.scheduled == 0:
             log.warning("spider=%s zéro article — vérifier XPath / robots / listing_url", self.name)

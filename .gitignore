@@ -9,7 +9,7 @@ __pycache__/
 data/
 logs/
 *.log
-.scrapy/
+fixtures/html/probe/
 *.db
 *.db-wal
 *.db-shm
