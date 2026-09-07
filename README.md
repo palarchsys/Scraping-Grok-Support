@@ -108,7 +108,7 @@ chmod +x install.sh
 source .venv/bin/activate
 scraping-grok db-init
 scraping-grok scrape
-sscraping-grok scrape --live
+scraping-grok scrape --live
 scraping-grok analyze
 scraping-grok probe --source francetvinfo_faits_divers
 scraping-grok triage
